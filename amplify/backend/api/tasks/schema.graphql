@@ -1,0 +1,8 @@
+type Task @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  description: String!
+  completed: Boolean
+  parentTaskID: ID @index(name: "parentTask")
+  parentTask: Task @belongsTo(fields: ["parentTaskID"])
+  subtasks: [Task] @hasMany(indexName: "parentTask", fields: ["id"])
+}
