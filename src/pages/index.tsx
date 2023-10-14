@@ -1,13 +1,22 @@
 import { withAuthenticator } from "@aws-amplify/ui-react"
 import { Amplify, DataStore } from "aws-amplify"
 import { Task } from "../models"
-import React, { createContext, useCallback, useContext, useState } from "react"
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import awsExports from "../aws-exports"
 import { DndProvider, DropTargetMonitor, useDrag, useDrop } from "react-dnd"
 import { OpType } from "@aws-amplify/datastore"
 import { last, pick, sortedIndexBy } from "lodash-es"
 import { TouchBackend } from "react-dnd-touch-backend"
 import { clsx } from "clsx"
+
+const DRAG_DELAY = 300
 
 function safeSubtraction(a: number, b: number): number {
   if (a >= MIN_INT + b) {
@@ -228,7 +237,13 @@ function App({ signOut }) {
   )
 
   return (
-    <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true }}>
+    <DndProvider
+      backend={TouchBackend}
+      options={{
+        enableMouseEvents: true,
+        delayTouchStart: DRAG_DELAY,
+      }}
+    >
       <EditModeContext.Provider value={isEditModeEnabled}>
         <div className="container ps-0 pe-3">
           <div className="mt-3 text-end">
@@ -475,6 +490,58 @@ function TaskItem({ task, onDrop }) {
 
   const isEditModeEnabled = useContext(EditModeContext)
 
+  const draggableRef = useRef<HTMLDivElement>(null)
+
+  const [isDragging2, setIsDragging2] = useState(false)
+
+  useEffect(function () {
+    let handle: NodeJS.Timeout | null = null
+
+    function onPointerDown(event) {
+      event.preventDefault()
+      handle = setTimeout(function () {
+        setIsDragging2(true)
+      }, DRAG_DELAY)
+    }
+
+    draggableRef.current!.addEventListener("pointerdown", onPointerDown)
+
+    function cancelDragInitiation() {
+      setIsDragging2(false)
+      if (handle) {
+        clearTimeout(handle)
+        handle = null
+      }
+    }
+
+    function onPointerUp() {
+      cancelDragInitiation()
+    }
+
+    window.addEventListener("pointerup", onPointerUp)
+
+    function onContextMenu(event) {
+      if (event.pointerType === "touch") {
+        event.preventDefault()
+      }
+    }
+
+    window.addEventListener("contextmenu", onContextMenu)
+
+    function onScroll() {
+      cancelDragInitiation()
+    }
+
+    window.addEventListener("scroll", onScroll)
+
+    return () => {
+      draggableRef.current!.removeEventListener("pointerdown", onPointerDown)
+      window.removeEventListener("pointerup", onPointerUp)
+      window.removeEventListener("contextmenu", onContextMenu)
+      window.removeEventListener("scroll", onScroll)
+    }
+  }, [])
+
   const [{ difference, isDragging }, dragRef] = useDrag(
     () => ({
       type: ItemTypes.TASK,
@@ -507,6 +574,7 @@ function TaskItem({ task, onDrop }) {
 
   const refCallback = useCallback(
     (node) => {
+      draggableRef.current = node
       dragRef(node)
       dropRef(node)
     },
@@ -516,7 +584,12 @@ function TaskItem({ task, onDrop }) {
   return (
     <div className="task">
       <div
-        className={clsx("row", "w-100", "bg-white", isOver && "insert-below")}
+        className={clsx(
+          "row",
+          "w-100",
+          isDragging2 && "bg-body-tertiary",
+          isOver && "insert-below",
+        )}
         ref={refCallback}
         style={
           isDragging
