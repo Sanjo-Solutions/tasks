@@ -7,7 +7,7 @@ import { DndProvider, DropTargetMonitor, useDrag, useDrop } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
 import { classNames } from "../classNames"
 import { OpType } from "@aws-amplify/datastore"
-import { pick, sortedIndexBy } from "lodash-es"
+import { last, pick, sortedIndexBy } from "lodash-es"
 
 function safeSubtraction(a: number, b: number): number {
   if (a >= MIN_INT + b) {
@@ -34,7 +34,7 @@ Amplify.configure(awsExports)
 const TasksContext = createContext<{
   tasks: Map<string, Task>
   subtasks: Map<string | null, Task[]>
-  generateOrderForNewTask: () => number
+  generateOrderForNewTask: (parentTaskID: string | null) => number
 }>({
   tasks: new Map<string, Task>(),
   subtasks: new Map<string | null, Task[]>(),
@@ -66,11 +66,17 @@ class App2 extends React.Component<
     this.generateOrderForNewTask = this.generateOrderForNewTask.bind(this)
   }
 
-  generateOrderForNewTask(): number {
-    if (this.maxOrder === null) {
-      return 0
+  generateOrderForNewTask(parentTaskID: string | null): number {
+    const tasks = this.state.subtasks.get(parentTaskID ?? null)
+    if (tasks && tasks.length >= 1) {
+      const biggestOrder = last(tasks)!.order
+      if (typeof biggestOrder === "number") {
+        return safeAddition(biggestOrder, GAP)
+      } else {
+        return 0
+      }
     } else {
-      return safeAddition(this.maxOrder, GAP)
+      return 0
     }
   }
 
@@ -175,7 +181,7 @@ function App({ signOut }) {
     const description = event.target.elements.description.value
     if (description.trim()) {
       const task = await DataStore.save(
-        new Task({ description, order: generateOrderForNewTask() })
+        new Task({ description, order: generateOrderForNewTask(null) })
       )
       event.target.reset()
     }
@@ -459,7 +465,7 @@ function TaskItem({ task, onDrop }) {
         new Task({
           description: formData.get("description") as string,
           parentTask: task,
-          order: generateOrderForNewTask(),
+          order: generateOrderForNewTask(task.id),
         })
       )
       event.target.querySelector('input[name="description"]').value = ""
