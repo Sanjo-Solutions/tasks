@@ -512,7 +512,7 @@ function TaskItem({ task, onDrop }) {
           <div className="p-3 flex-grow-1" onClick={onCheckBoxAreaClicked}>
             <input
               type="checkbox"
-              checked={task.completed}
+              checked={Boolean(task.completed)}
               onChange={onToggleCompleted}
               onClick={onCheckBoxClicked}
               className="d-block mt-0"
