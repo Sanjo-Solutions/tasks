@@ -70,9 +70,7 @@ class App2 extends React.Component<
     if (this.maxOrder === null) {
       return 0
     } else {
-      return this.maxOrder <= MAX_INT - GAP
-        ? this.maxOrder + GAP
-        : MAX_INT
+      return this.maxOrder <= MAX_INT - GAP ? this.maxOrder + GAP : MAX_INT
     }
   }
 
@@ -106,9 +104,7 @@ class App2 extends React.Component<
       }
     }
 
-    console.log('subscribe')
     this.subscription = DataStore.observe(Task).subscribe((message) => {
-      console.log('message', message)
       const task = message.element
       switch (message.opType) {
         case OpType.INSERT:
@@ -151,7 +147,6 @@ class App2 extends React.Component<
   }
 
   componentWillUnmount(): void {
-    console.log('unsubscribe')
     this.subscription.unsubscribe()
   }
 
