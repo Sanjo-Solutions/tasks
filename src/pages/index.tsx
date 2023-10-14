@@ -24,8 +24,10 @@ const ItemTypes = {
 Amplify.configure(awsExports)
 
 const TasksContext = createContext<{
+  tasks: Map<string, Task>
   subtasks: Map<string | null, Task[]>
 }>({
+  tasks: new Map<string, Task>(),
   subtasks: new Map<string | null, Task[]>(),
 })
 
@@ -35,6 +37,7 @@ class App2 extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
+      tasks: new Map<string, Task>(), // task id to task
       subtasks: new Map<string | null, Task[]>(), // task id to subtasks
     }
   }
@@ -66,13 +69,19 @@ class App2 extends React.Component {
       const task = message.element
       switch (message.opType) {
         case OpType.INSERT:
+          this.state.tasks.set(task.id, task)
           addSubtask(task)
           break
         case OpType.UPDATE:
-          removeSubtask(task)
+          const oldTask = this.state.tasks.get(task.id)
+          if (oldTask) {
+            removeSubtask(oldTask)
+          }
+          this.state.tasks.set(task.id, task)
           addSubtask(task)
           break
         case OpType.DELETE:
+          this.state.tasks.delete(task.id)
           removeSubtask(task)
           break
       }
@@ -80,6 +89,10 @@ class App2 extends React.Component {
     })
 
     const tasks = await DataStore.query(Task)
+
+    for (const task of tasks) {
+      this.state.tasks.set(task.id, task)
+    }
 
     for (const task of tasks) {
       addSubtask(task)
@@ -180,6 +193,7 @@ function TaskList({ tasks }) {
       const taskOrder = task.order
       DataStore.save(
         Task.copyOf(task2, updated => {
+          updated.parentTaskID = task.parentTaskID
           updated.order = taskOrder + 1
         })
       )
@@ -192,6 +206,7 @@ function TaskList({ tasks }) {
         ),
         DataStore.save(
           Task.copyOf(task2, updated => {
+            updated.parentTaskID = task.parentTaskID
             updated.order = 1
           })
         ),
