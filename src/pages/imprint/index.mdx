@@ -1,19 +1,28 @@
-import Head from 'next/head'
+import Head from "next/head"
+import { TextSection } from "../../components/TextSection.js"
+import { NavBar } from "../../components/NavBar"
 
 <Head>
   <title>Imprint</title>
 </Head>
 
-# Imprint
+<NavBar />
 
-Sanjo Solutions UG (haftungsbeschränkt)<br/>
-Aroser Allee 154<br/>
-13407 Berlin
+<div className="container pt-2">
+  <TextSection>
+    # Imprint
 
-CEO:\_\_ Jonas Aschenbrenner
+    Sanjo Solutions UG (haftungsbeschränkt)<br/>
+    Aroser Allee 154<br/>
+    13407 Berlin
 
-Email:\_\_ jonas@sanjo-solutions.com
+    CEO: Jonas Aschenbrenner
 
-Commercial register entry:\_\_<br/>
-Amtsgericht Charlottenburg<br/>
-HRB 238547 B
+    Email: jonas@sanjo-solutions.com
+
+    Commercial register entry:<br/>
+    Amtsgericht Charlottenburg<br/>
+    HRB 238547 B
+
+  </TextSection>
+</div>
