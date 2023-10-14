@@ -42,34 +42,43 @@ Amplify.configure(awsExports)
 const TasksContext = createContext<{
   tasks: Map<string, Task>
   subtasks: Map<string | null, Task[]>
-  maxOrder: number | null
+  generateOrderForNewTask: () => number
 }>({
   tasks: new Map<string, Task>(),
   subtasks: new Map<string | null, Task[]>(),
-  maxOrder: null,
+  generateOrderForNewTask() {
+    return 0
+  },
 })
 
 const EditModeContext = createContext<boolean>(true)
 
 const GAP = 10000000000
 
-function generateOrderForNewTask(maxOrder: number | null): number {
-  if (maxOrder === null) {
-    return 0
-  } else {
-    return maxOrder <= Number.MAX_SAFE_INTEGER - GAP
-      ? maxOrder + GAP
-      : Number.MAX_SAFE_INTEGER
-  }
-}
+class App2 extends React.Component<
+  { signOut: any },
+  { tasks: Map<string, Task>; subtasks: Map<string | null, Task[]> }
+> {
+  maxOrder: number | null = null
+  subscription: any = null
 
-class App2 extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
       tasks: new Map<string, Task>(), // task id to task
       subtasks: new Map<string | null, Task[]>(), // task id to subtasks
-      maxOrder: null,
+    }
+
+    this.generateOrderForNewTask = this.generateOrderForNewTask.bind(this)
+  }
+
+  generateOrderForNewTask(): number {
+    if (this.maxOrder === null) {
+      return 0
+    } else {
+      return this.maxOrder <= Number.MAX_SAFE_INTEGER - GAP
+        ? this.maxOrder + GAP
+        : Number.MAX_SAFE_INTEGER
     }
   }
 
@@ -98,10 +107,8 @@ class App2 extends React.Component {
 
     const updateMaxOrder = order => {
       if (typeof order === 'number') {
-        this.state.maxOrder =
-          this.state.maxOrder === null
-            ? order
-            : Math.max(this.state.maxOrder, order)
+        this.maxOrder =
+          this.maxOrder === null ? order : Math.max(this.maxOrder, order)
       }
     }
 
@@ -153,7 +160,12 @@ class App2 extends React.Component {
 
   render() {
     return (
-      <TasksContext.Provider value={this.state}>
+      <TasksContext.Provider
+        value={{
+          ...this.state,
+          generateOrderForNewTask: this.generateOrderForNewTask,
+        }}
+      >
         <App {...this.props} />
       </TasksContext.Provider>
     )
@@ -164,14 +176,14 @@ function App({ signOut }) {
   const [isEditModeEnabled, setIsEditModeEnabled] = useState(
     localStorage.getItem('isEditModeEnabled') !== 'false'
   )
-  const { subtasks, maxOrder } = useContext(TasksContext)
+  const { subtasks, generateOrderForNewTask } = useContext(TasksContext)
 
   const handleAddTask = async event => {
     event.preventDefault()
     const description = event.target.elements.description.value
     if (description.trim()) {
       const task = await DataStore.save(
-        new Task({ description, order: generateOrderForNewTask(maxOrder) })
+        new Task({ description, order: generateOrderForNewTask() })
       )
       event.target.reset()
     }
@@ -294,7 +306,7 @@ function TaskList({ tasks }) {
             const updatedOrder =
               typeof orderAfter === 'number'
                 ? Math.max(
-                    Math.round(orderBefore + orderAfter) / 2,
+                    Math.round((orderBefore + orderAfter) / 2),
                     oneHigherOrMax
                   )
                 : oneHigherOrMax
