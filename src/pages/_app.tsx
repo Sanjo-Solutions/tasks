@@ -24,10 +24,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <footer className='footer mt-auto py-3 bg-light'>
           <div className='container'>
             <div className='row'>
-              <div
-                className='col-12 col-md text-end mt-4 mt-md-0'
-                style={{ marginRight: '40px' }}
-              >
+              <div className='col-12 col-md text-end mt-4 mt-md-0'>
                 <ol className='footer-link-list list-inline mb-0'>
                   <li className='list-inline-item d-block d-md-inline-block text-center text-md-start me-0 me-md-3'>
                     <Link href='/imprint'>Imprint</Link>
