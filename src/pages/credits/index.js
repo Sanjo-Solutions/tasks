@@ -1,4 +1,4 @@
-import { Credit } from "./Credit"
+import { Credit } from "../../components/credits/Credit"
 import React from "react"
 import { NavBar } from "../../components/NavBar"
 import { serializeMDX } from "../../serializeMDX"
