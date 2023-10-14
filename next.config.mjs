@@ -15,6 +15,7 @@ const withMDX = createMDX({
 
 const withPWA = nextPWA({
   dest: "public",
+  reloadOnOnline: false,
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,
