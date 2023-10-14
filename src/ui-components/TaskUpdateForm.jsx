@@ -32,11 +32,15 @@ export default function TaskUpdateForm(props) {
   const initialValues = {
     description: "",
     completed: false,
+    level: "",
+    order: "",
   };
   const [description, setDescription] = React.useState(
     initialValues.description
   );
   const [completed, setCompleted] = React.useState(initialValues.completed);
+  const [level, setLevel] = React.useState(initialValues.level);
+  const [order, setOrder] = React.useState(initialValues.order);
   const [errors, setErrors] = React.useState({});
   const resetStateValues = () => {
     const cleanValues = taskRecord
@@ -44,6 +48,8 @@ export default function TaskUpdateForm(props) {
       : initialValues;
     setDescription(cleanValues.description);
     setCompleted(cleanValues.completed);
+    setLevel(cleanValues.level);
+    setOrder(cleanValues.order);
     setErrors({});
   };
   const [taskRecord, setTaskRecord] = React.useState(taskModelProp);
@@ -60,6 +66,8 @@ export default function TaskUpdateForm(props) {
   const validations = {
     description: [{ type: "Required" }],
     completed: [],
+    level: [],
+    order: [],
   };
   const runValidationTasks = async (
     fieldName,
@@ -89,6 +97,8 @@ export default function TaskUpdateForm(props) {
         let modelFields = {
           description,
           completed,
+          level,
+          order,
         };
         const validationResponses = await Promise.all(
           Object.keys(validations).reduce((promises, fieldName) => {
@@ -146,6 +156,8 @@ export default function TaskUpdateForm(props) {
             const modelFields = {
               description: value,
               completed,
+              level,
+              order,
             };
             const result = onChange(modelFields);
             value = result?.description ?? value;
@@ -171,6 +183,8 @@ export default function TaskUpdateForm(props) {
             const modelFields = {
               description,
               completed: value,
+              level,
+              order,
             };
             const result = onChange(modelFields);
             value = result?.completed ?? value;
@@ -185,6 +199,68 @@ export default function TaskUpdateForm(props) {
         hasError={errors.completed?.hasError}
         {...getOverrideProps(overrides, "completed")}
       ></SwitchField>
+      <TextField
+        label="Level"
+        isRequired={false}
+        isReadOnly={false}
+        type="number"
+        step="any"
+        value={level}
+        onChange={(e) => {
+          let value = isNaN(parseInt(e.target.value))
+            ? e.target.value
+            : parseInt(e.target.value);
+          if (onChange) {
+            const modelFields = {
+              description,
+              completed,
+              level: value,
+              order,
+            };
+            const result = onChange(modelFields);
+            value = result?.level ?? value;
+          }
+          if (errors.level?.hasError) {
+            runValidationTasks("level", value);
+          }
+          setLevel(value);
+        }}
+        onBlur={() => runValidationTasks("level", level)}
+        errorMessage={errors.level?.errorMessage}
+        hasError={errors.level?.hasError}
+        {...getOverrideProps(overrides, "level")}
+      ></TextField>
+      <TextField
+        label="Order"
+        isRequired={false}
+        isReadOnly={false}
+        type="number"
+        step="any"
+        value={order}
+        onChange={(e) => {
+          let value = isNaN(parseInt(e.target.value))
+            ? e.target.value
+            : parseInt(e.target.value);
+          if (onChange) {
+            const modelFields = {
+              description,
+              completed,
+              level,
+              order: value,
+            };
+            const result = onChange(modelFields);
+            value = result?.order ?? value;
+          }
+          if (errors.order?.hasError) {
+            runValidationTasks("order", value);
+          }
+          setOrder(value);
+        }}
+        onBlur={() => runValidationTasks("order", order)}
+        errorMessage={errors.order?.errorMessage}
+        hasError={errors.order?.hasError}
+        {...getOverrideProps(overrides, "order")}
+      ></TextField>
       <Flex
         justifyContent="space-between"
         {...getOverrideProps(overrides, "CTAFlex")}

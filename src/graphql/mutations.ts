@@ -16,11 +16,13 @@ export const createTask = /* GraphQL */ `mutation CreateTask(
     id
     description
     completed
+    order
     parentTaskID
     parentTask {
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -56,11 +58,13 @@ export const updateTask = /* GraphQL */ `mutation UpdateTask(
     id
     description
     completed
+    order
     parentTaskID
     parentTask {
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -96,11 +100,13 @@ export const deleteTask = /* GraphQL */ `mutation DeleteTask(
     id
     description
     completed
+    order
     parentTaskID
     parentTask {
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt

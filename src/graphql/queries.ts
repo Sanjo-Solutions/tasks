@@ -13,11 +13,13 @@ export const getTask = /* GraphQL */ `query GetTask($id: ID!) {
     id
     description
     completed
+    order
     parentTaskID
     parentTask {
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -52,6 +54,7 @@ export const listTasks = /* GraphQL */ `query ListTasks(
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -83,6 +86,7 @@ export const syncTasks = /* GraphQL */ `query SyncTasks(
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -98,15 +102,17 @@ export const syncTasks = /* GraphQL */ `query SyncTasks(
   }
 }
 ` as GeneratedQuery<APITypes.SyncTasksQueryVariables, APITypes.SyncTasksQuery>;
-export const tasksByParentTaskID = /* GraphQL */ `query TasksByParentTaskID(
+export const tasksByParentTaskIDAndOrder = /* GraphQL */ `query TasksByParentTaskIDAndOrder(
   $parentTaskID: ID!
+  $order: ModelIntKeyConditionInput
   $sortDirection: ModelSortDirection
   $filter: ModelTaskFilterInput
   $limit: Int
   $nextToken: String
 ) {
-  tasksByParentTaskID(
+  tasksByParentTaskIDAndOrder(
     parentTaskID: $parentTaskID
+    order: $order
     sortDirection: $sortDirection
     filter: $filter
     limit: $limit
@@ -116,6 +122,7 @@ export const tasksByParentTaskID = /* GraphQL */ `query TasksByParentTaskID(
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -131,6 +138,6 @@ export const tasksByParentTaskID = /* GraphQL */ `query TasksByParentTaskID(
   }
 }
 ` as GeneratedQuery<
-  APITypes.TasksByParentTaskIDQueryVariables,
-  APITypes.TasksByParentTaskIDQuery
+  APITypes.TasksByParentTaskIDAndOrderQueryVariables,
+  APITypes.TasksByParentTaskIDAndOrderQuery
 >;

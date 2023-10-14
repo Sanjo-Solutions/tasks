@@ -24,6 +24,13 @@ export const schema = {
                     "isRequired": false,
                     "attributes": []
                 },
+                "order": {
+                    "name": "order",
+                    "isArray": false,
+                    "type": "Int",
+                    "isRequired": false,
+                    "attributes": []
+                },
                 "parentTaskID": {
                     "name": "parentTaskID",
                     "isArray": false,
@@ -91,7 +98,8 @@ export const schema = {
                     "properties": {
                         "name": "parentTask",
                         "fields": [
-                            "parentTaskID"
+                            "parentTaskID",
+                            "order"
                         ]
                     }
                 },
@@ -120,5 +128,5 @@ export const schema = {
     "enums": {},
     "nonModels": {},
     "codegenVersion": "3.4.4",
-    "version": "05c53b3e1f1518ecfacd8e20caf03e21"
+    "version": "fe256f16032ae473cd1bedd8e7ebd2a2"
 };
