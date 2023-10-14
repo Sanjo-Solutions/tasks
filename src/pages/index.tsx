@@ -1,21 +1,21 @@
-import { withAuthenticator } from '@aws-amplify/ui-react'
-import { DataStore, Amplify, SortDirection } from 'aws-amplify'
-import { LazyTask, Task } from '../models'
+import { withAuthenticator } from "@aws-amplify/ui-react"
+import { DataStore, Amplify, SortDirection } from "aws-amplify"
+import { LazyTask, Task } from "../models"
 import {
   useState,
   useEffect,
   useCallback,
   createContext,
   useContext,
-} from 'react'
-import awsExports from '../aws-exports'
-import React from 'react'
-import { DropTargetMonitor, useDrag, useDrop } from 'react-dnd'
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-import { classNames } from '../classNames'
-import { OpType } from '@aws-amplify/datastore'
-import { sortedIndexBy } from 'lodash-es'
+} from "react"
+import awsExports from "../aws-exports"
+import React from "react"
+import { DropTargetMonitor, useDrag, useDrop } from "react-dnd"
+import { DndProvider } from "react-dnd"
+import { HTML5Backend } from "react-dnd-html5-backend"
+import { classNames } from "../classNames"
+import { OpType } from "@aws-amplify/datastore"
+import { sortedIndexBy, pick } from "lodash-es"
 
 function safeSubtraction(a: number, b: number): number {
   if (a >= Number.MIN_SAFE_INTEGER + b) {
@@ -34,7 +34,7 @@ function safeAddition(a: number, b: number): number {
 }
 
 const ItemTypes = {
-  TASK: 'task',
+  TASK: "task",
 }
 
 Amplify.configure(awsExports)
@@ -83,36 +83,36 @@ class App2 extends React.Component<
   }
 
   async componentDidMount() {
-    const addSubtask = task => {
+    const addSubtask = (task) => {
       const parentTaskID = task.parentTaskID ?? null
       let subtasks = this.state.subtasks.get(parentTaskID)
       if (!subtasks) {
         subtasks = [task]
         this.state.subtasks.set(parentTaskID, subtasks)
       } else {
-        const insertIndex = sortedIndexBy(subtasks, task, task => task.order)
+        const insertIndex = sortedIndexBy(subtasks, task, (task) => task.order)
         subtasks.splice(insertIndex, 0, task)
       }
     }
 
-    const removeSubtask = task => {
+    const removeSubtask = (task) => {
       const subtasks = this.state.subtasks.get(task.parentTaskID ?? null)
       if (subtasks) {
-        const index = subtasks.findIndex(task2 => task2.id === task.id)
+        const index = subtasks.findIndex((task2) => task2.id === task.id)
         if (index !== -1) {
           subtasks.splice(index, 1)
         }
       }
     }
 
-    const updateMaxOrder = order => {
-      if (typeof order === 'number') {
+    const updateMaxOrder = (order) => {
+      if (typeof order === "number") {
         this.maxOrder =
           this.maxOrder === null ? order : Math.max(this.maxOrder, order)
       }
     }
 
-    this.subscription = DataStore.observe(Task).subscribe(message => {
+    this.subscription = DataStore.observe(Task).subscribe((message) => {
       const task = message.element
       switch (message.opType) {
         case OpType.INSERT:
@@ -174,11 +174,11 @@ class App2 extends React.Component<
 
 function App({ signOut }) {
   const [isEditModeEnabled, setIsEditModeEnabled] = useState(
-    localStorage.getItem('isEditModeEnabled') !== 'false'
+    localStorage.getItem("isEditModeEnabled") !== "false"
   )
   const { subtasks, generateOrderForNewTask } = useContext(TasksContext)
 
-  const handleAddTask = async event => {
+  const handleAddTask = async (event) => {
     event.preventDefault()
     const description = event.target.elements.description.value
     if (description.trim()) {
@@ -189,29 +189,76 @@ function App({ signOut }) {
     }
   }
 
-  const onChangeEditMode = useCallback(event => {
+  const onChangeEditMode = useCallback((event) => {
     setIsEditModeEnabled(event.target.checked)
-    localStorage.setItem('isEditModeEnabled', event.target.checked)
+    localStorage.setItem("isEditModeEnabled", event.target.checked)
   }, [])
+
+  const convertTasksToJSON = useCallback(
+    function convertTasksToJSON(tasks: Task[]): any[] {
+      const convertedTasks: any[] = []
+      for (const task of tasks) {
+        convertedTasks.push({
+          ...pick(task, "id", "description", "completed", "order"),
+          subtasks: convertTasksToJSON(subtasks.get(task.id) ?? []),
+        })
+      }
+      return convertedTasks
+    },
+    [subtasks]
+  )
+
+  const onExport = useCallback(
+    function onExport() {
+      const tasks = subtasks.get(null) ?? []
+      const exportData = convertTasksToJSON(tasks)
+
+      const a = document.createElement("a")
+      a.setAttribute(
+        "href",
+        `data:application/json;charset=utf-8,${encodeURIComponent(
+          JSON.stringify(exportData, null, 2) + "\n"
+        )}`
+      )
+      a.setAttribute("download", "tasks.json")
+      a.style.display = "none"
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    },
+    [subtasks, convertTasksToJSON]
+  )
 
   return (
     <DndProvider backend={HTML5Backend}>
       <EditModeContext.Provider value={isEditModeEnabled}>
-        <div className='container ps-0 pe-3'>
-          <div className='mt-3 text-end'>
+        <div className="container ps-0 pe-3">
+          <div className="mt-3 text-end">
             <input
-              type='checkbox'
-              className='btn-check'
-              id='editMode'
-              autoComplete='off'
+              type="checkbox"
+              className="btn-check"
+              id="editMode"
+              autoComplete="off"
               onChange={onChangeEditMode}
               checked={isEditModeEnabled}
             />
-            <label className='btn' htmlFor='editMode'>
+            <label className="btn" htmlFor="editMode">
               Edit mode
             </label>
 
-            <button className='btn btn-secondary ms-2' onClick={signOut}>
+            <button
+              type="button"
+              className="btn btn-outline-secondary ms-2"
+              onClick={onExport}
+            >
+              Export
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary ms-2"
+              onClick={signOut}
+            >
               Log out
             </button>
           </div>
@@ -219,22 +266,22 @@ function App({ signOut }) {
           {isEditModeEnabled && (
             <form
               onSubmit={handleAddTask}
-              className='ms-3'
+              className="ms-3"
               style={{
-                marginTop: '0.4375rem',
-                paddingTop: '0.5625rem',
-                paddingBottom: '0.5625rem',
+                marginTop: "0.4375rem",
+                paddingTop: "0.5625rem",
+                paddingBottom: "0.5625rem",
               }}
             >
-              <div className='input-group'>
+              <div className="input-group">
                 <input
-                  type='text'
-                  name='description'
-                  placeholder='Description of a task'
-                  className='form-control'
+                  type="text"
+                  name="description"
+                  placeholder="Description of a task"
+                  className="form-control"
                   autoFocus
                 />
-                <button type='submit' className='btn btn-primary'>
+                <button type="submit" className="btn btn-primary">
                   Add
                 </button>
               </div>
@@ -264,7 +311,7 @@ function TaskList({ tasks }) {
       if (parentSubtasks && parentSubtasks.length >= 1) {
         const updatedSubtasks = Array.from(parentSubtasks)
         const indexBefore = updatedSubtasks.findIndex(
-          task2 => task2.id === task.id
+          (task2) => task2.id === task.id
         )
         updatedSubtasks.splice(index, 0, task)
         if (indexBefore !== -1) {
@@ -276,16 +323,16 @@ function TaskList({ tasks }) {
         }
         const updatedOrders = new Array(updatedSubtasks.length)
         const firstSubtask = updatedSubtasks[0]
-        if (typeof firstSubtask.order !== 'number') {
+        if (typeof firstSubtask.order !== "number") {
           if (
             updatedSubtasks.length >= 2 &&
-            typeof updatedSubtasks[1]?.order === 'number'
+            typeof updatedSubtasks[1]?.order === "number"
           ) {
             updatedOrders[0] = safeSubtraction(updatedSubtasks[1].order, GAP)
           } else {
             const orders = updatedSubtasks
-              .map(task => task.order)
-              .filter(order => typeof order === 'number') as number[]
+              .map((task) => task.order)
+              .filter((order) => typeof order === "number") as number[]
             const smallestOrder =
               orders.length >= 1
                 ? orders.reduce((previous, value) => Math.min(previous, value))
@@ -300,11 +347,11 @@ function TaskList({ tasks }) {
         for (let index2 = 1; index2 < parentSubtasks.length; index2++) {
           const order = updatedSubtasks[index2].order
           const orderBefore = updatedOrders[index2 - 1]
-          if (typeof order !== 'number' || order <= orderBefore) {
+          if (typeof order !== "number" || order <= orderBefore) {
             const orderAfter = updatedSubtasks[index2 + 1]?.order
             const oneHigherOrMax = safeAddition(orderBefore, 1)
             const updatedOrder =
-              typeof orderAfter === 'number'
+              typeof orderAfter === "number"
                 ? Math.max(
                     Math.round((orderBefore + orderAfter) / 2),
                     oneHigherOrMax
@@ -322,7 +369,7 @@ function TaskList({ tasks }) {
           if (updatedSubtasks[index2].order !== updatedOrders[index2]) {
             promises.push(
               DataStore.save(
-                Task.copyOf(updatedSubtasks[index2], updated => {
+                Task.copyOf(updatedSubtasks[index2], (updated) => {
                   if (updatedSubtasks[index2].id === task.id) {
                     updated.parentTaskID = parentTask ? parentTask.id : null
                   }
@@ -336,7 +383,7 @@ function TaskList({ tasks }) {
         await Promise.all(promises)
       } else {
         await DataStore.save(
-          Task.copyOf(task, updated => {
+          Task.copyOf(task, (updated) => {
             updated.parentTaskID = parentTask.id
             updated.order = 0
           })
@@ -372,7 +419,7 @@ function TaskList({ tasks }) {
 
   return (
     <div>
-      {tasks.map(task => (
+      {tasks.map((task) => (
         <TaskItem key={task.id} task={task} onDrop={onDrop} />
       ))}
     </div>
@@ -380,12 +427,12 @@ function TaskList({ tasks }) {
 }
 
 function TaskItem({ task, onDrop }) {
-  const { subtasks } = useContext(TasksContext)
+  const { subtasks, generateOrderForNewTask } = useContext(TasksContext)
 
   const onToggleCompleted = useCallback(
-    async event => {
+    async (event) => {
       await DataStore.save(
-        Task.copyOf(task, updated => {
+        Task.copyOf(task, (updated) => {
           updated.completed = event.target.checked
         })
       )
@@ -394,9 +441,9 @@ function TaskItem({ task, onDrop }) {
   )
 
   const onCheckBoxAreaClicked = useCallback(
-    async event => {
+    async (event) => {
       await DataStore.save(
-        Task.copyOf(task, updated => {
+        Task.copyOf(task, (updated) => {
           updated.completed = !task.completed
         })
       )
@@ -404,7 +451,7 @@ function TaskItem({ task, onDrop }) {
     [task]
   )
 
-  const onCheckBoxClicked = useCallback(event => {
+  const onCheckBoxClicked = useCallback((event) => {
     event.stopPropagation()
   }, [])
 
@@ -413,18 +460,19 @@ function TaskItem({ task, onDrop }) {
   }, [task])
 
   const onAddSubtask = useCallback(
-    async event => {
+    async (event) => {
       event.preventDefault()
       const formData = new FormData(event.target)
       await DataStore.save(
         new Task({
-          description: formData.get('description') as string,
+          description: formData.get("description") as string,
           parentTask: task,
+          order: generateOrderForNewTask(),
         })
       )
-      event.target.querySelector('input[name="description"]').value = ''
+      event.target.querySelector('input[name="description"]').value = ""
     },
-    [task]
+    [task, generateOrderForNewTask]
   )
 
   const isEditModeEnabled = useContext(EditModeContext)
@@ -433,7 +481,7 @@ function TaskItem({ task, onDrop }) {
     () => ({
       type: ItemTypes.TASK,
       item: task,
-      collect: monitor => ({
+      collect: (monitor) => ({
         opacity: monitor.isDragging() ? 0.5 : 1,
       }),
     }),
@@ -454,7 +502,7 @@ function TaskItem({ task, onDrop }) {
   )
 
   const refCallback = useCallback(
-    node => {
+    (node) => {
       dragRef(node)
       dropRef(node)
     },
@@ -462,61 +510,61 @@ function TaskItem({ task, onDrop }) {
   )
 
   return (
-    <div className='task'>
+    <div className="task">
       <div
-        className={classNames('row', isOver && 'insert-below')}
+        className={classNames("row", isOver && "insert-below")}
         ref={refCallback}
         style={{ opacity }}
       >
-        <div className='col-auto d-flex align-items-center'>
-          <div className='p-3 flex-grow-1' onClick={onCheckBoxAreaClicked}>
+        <div className="col-auto d-flex align-items-center">
+          <div className="p-3 flex-grow-1" onClick={onCheckBoxAreaClicked}>
             <input
-              type='checkbox'
+              type="checkbox"
               checked={task.completed}
               onChange={onToggleCompleted}
               onClick={onCheckBoxClicked}
-              className='d-block mt-0'
-              style={{ width: '1.5rem', height: '1.5rem' }}
+              className="d-block mt-0"
+              style={{ width: "1.5rem", height: "1.5rem" }}
             />
           </div>
-          <label className='form-check-label'>{task.description}</label>
+          <label className="form-check-label">{task.description}</label>
         </div>
         {isEditModeEnabled && (
-          <div className='col-auto ms-auto'>
+          <div className="col-auto ms-auto">
             <div
               onClick={onDelete}
               style={{
-                paddingTop: '0.375rem',
-                paddingBottom: '0.375rem',
-                paddingLeft: '0.75rem',
-                paddingRight: '0.75rem',
-                cursor: 'pointer',
-                fontSize: '1.5rem',
+                paddingTop: "0.375rem",
+                paddingBottom: "0.375rem",
+                paddingLeft: "0.75rem",
+                paddingRight: "0.75rem",
+                cursor: "pointer",
+                fontSize: "1.5rem",
               }}
             >
-              <i className='bi bi-trash3'></i>
+              <i className="bi bi-trash3"></i>
             </div>
           </div>
         )}
       </div>
 
-      <div style={{ paddingLeft: '2.5rem' }}>
+      <div style={{ paddingLeft: "2.5rem" }}>
         <TaskList tasks={subtasks.get(task.id) ?? []} />
 
         {isEditModeEnabled && (
           <form
             onSubmit={onAddSubtask}
-            style={{ paddingTop: '0.5625rem', paddingBottom: '0.5625rem' }}
-            className='ms-3'
+            style={{ paddingTop: "0.5625rem", paddingBottom: "0.5625rem" }}
+            className="ms-3"
           >
-            <div className='input-group'>
+            <div className="input-group">
               <input
-                name='description'
-                type='text'
-                placeholder='Description of a subtask'
-                className='form-control'
+                name="description"
+                type="text"
+                placeholder="Description of a subtask"
+                className="form-control"
               />
-              <button type='submit' className='btn btn-primary'>
+              <button type="submit" className="btn btn-primary">
                 Add
               </button>
             </div>
