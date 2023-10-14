@@ -25,4 +25,4 @@ npm run dev
 
 ## Legal notes
 
-* The privacy policy text has been derived from the free version of [eRecht24](https://www.e-recht24.de/). If you publish a deploymen of the app yourself, it seems legally safer to replace the privacy policy text with one that you are copyright holder of or have received a license / permission for putting it on your website.
+* The privacy policy text has been derived from the free version of [eRecht24](https://www.e-recht24.de/). If you publish a deployment of the app yourself, it seems legally safer to replace the privacy policy text with one that you are copyright holder of or have received a license / permission for putting it on your website.
