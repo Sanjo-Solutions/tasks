@@ -17,6 +17,22 @@ import { classNames } from '../classNames'
 import { OpType } from '@aws-amplify/datastore'
 import { sortedIndexBy } from 'lodash-es'
 
+function safeSubtraction(a: number, b: number): number {
+  if (a >= Number.MIN_SAFE_INTEGER + b) {
+    return a - b
+  } else {
+    return Number.MIN_SAFE_INTEGER
+  }
+}
+
+function safeAddition(a: number, b: number): number {
+  if (a <= Number.MAX_SAFE_INTEGER - b) {
+    return a + b
+  } else {
+    return Number.MAX_SAFE_INTEGER
+  }
+}
+
 const ItemTypes = {
   TASK: 'task',
 }
@@ -26,12 +42,26 @@ Amplify.configure(awsExports)
 const TasksContext = createContext<{
   tasks: Map<string, Task>
   subtasks: Map<string | null, Task[]>
+  maxOrder: number | null
 }>({
   tasks: new Map<string, Task>(),
   subtasks: new Map<string | null, Task[]>(),
+  maxOrder: null,
 })
 
 const EditModeContext = createContext<boolean>(true)
+
+const GAP = 10000000000
+
+function generateOrderForNewTask(maxOrder: number | null): number {
+  if (maxOrder === null) {
+    return 0
+  } else {
+    return maxOrder <= Number.MAX_SAFE_INTEGER - GAP
+      ? maxOrder + GAP
+      : Number.MAX_SAFE_INTEGER
+  }
+}
 
 class App2 extends React.Component {
   constructor(props) {
@@ -39,6 +69,7 @@ class App2 extends React.Component {
     this.state = {
       tasks: new Map<string, Task>(), // task id to task
       subtasks: new Map<string | null, Task[]>(), // task id to subtasks
+      maxOrder: null,
     }
   }
 
@@ -65,12 +96,22 @@ class App2 extends React.Component {
       }
     }
 
+    const updateMaxOrder = order => {
+      if (typeof order === 'number') {
+        this.state.maxOrder =
+          this.state.maxOrder === null
+            ? order
+            : Math.max(this.state.maxOrder, order)
+      }
+    }
+
     this.subscription = DataStore.observe(Task).subscribe(message => {
       const task = message.element
       switch (message.opType) {
         case OpType.INSERT:
           this.state.tasks.set(task.id, task)
           addSubtask(task)
+          updateMaxOrder(task.order)
           break
         case OpType.UPDATE:
           const oldTask = this.state.tasks.get(task.id)
@@ -79,6 +120,7 @@ class App2 extends React.Component {
           }
           this.state.tasks.set(task.id, task)
           addSubtask(task)
+          updateMaxOrder(task.order)
           break
         case OpType.DELETE:
           this.state.tasks.delete(task.id)
@@ -96,6 +138,10 @@ class App2 extends React.Component {
 
     for (const task of tasks) {
       addSubtask(task)
+    }
+
+    for (const task of tasks) {
+      updateMaxOrder(task.order)
     }
 
     this.forceUpdate()
@@ -118,13 +164,15 @@ function App({ signOut }) {
   const [isEditModeEnabled, setIsEditModeEnabled] = useState(
     localStorage.getItem('isEditModeEnabled') !== 'false'
   )
-  const { subtasks } = useContext(TasksContext)
+  const { subtasks, maxOrder } = useContext(TasksContext)
 
   const handleAddTask = async event => {
     event.preventDefault()
     const description = event.target.elements.description.value
     if (description.trim()) {
-      const task = await DataStore.save(new Task({ description }))
+      const task = await DataStore.save(
+        new Task({ description, order: generateOrderForNewTask(maxOrder) })
+      )
       event.target.reset()
     }
   }
@@ -188,31 +236,127 @@ function App({ signOut }) {
 }
 
 function TaskList({ tasks }) {
-  const onDrop = useCallback(async function onDrop(task, task2) {
-    if (typeof task.order === 'number') {
-      const taskOrder = task.order
-      DataStore.save(
-        Task.copyOf(task2, updated => {
-          updated.parentTaskID = task.parentTaskID
-          updated.order = taskOrder + 1
-        })
-      )
-    } else {
-      await Promise.all([
-        DataStore.save(
+  const { tasks: idToTask, subtasks } = useContext(TasksContext)
+
+  const hasSubtasks = useCallback(
+    function (task) {
+      const taskSubtasks = subtasks.get(task.id)
+      return Boolean(taskSubtasks && taskSubtasks.length >= 1)
+    },
+    [subtasks]
+  )
+
+  const insertAt = useCallback(
+    async function (parentTask, task, index) {
+      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)
+      if (parentSubtasks && parentSubtasks.length >= 1) {
+        const updatedSubtasks = Array.from(parentSubtasks)
+        const indexBefore = updatedSubtasks.findIndex(
+          task2 => task2.id === task.id
+        )
+        updatedSubtasks.splice(index, 0, task)
+        if (indexBefore !== -1) {
+          if (indexBefore < index) {
+            updatedSubtasks.splice(indexBefore, 1)
+          } else {
+            updatedSubtasks.splice(indexBefore + 1, 1)
+          }
+        }
+        const updatedOrders = new Array(updatedSubtasks.length)
+        const firstSubtask = updatedSubtasks[0]
+        if (typeof firstSubtask.order !== 'number') {
+          if (
+            updatedSubtasks.length >= 2 &&
+            typeof updatedSubtasks[1]?.order === 'number'
+          ) {
+            updatedOrders[0] = safeSubtraction(updatedSubtasks[1].order, GAP)
+          } else {
+            const orders = updatedSubtasks
+              .map(task => task.order)
+              .filter(order => typeof order === 'number') as number[]
+            const smallestOrder =
+              orders.length >= 1
+                ? orders.reduce((previous, value) => Math.min(previous, value))
+                : null
+            updatedOrders[0] = smallestOrder
+              ? safeSubtraction(smallestOrder, GAP)
+              : 0
+          }
+        } else {
+          updatedOrders[0] = firstSubtask.order
+        }
+        for (let index2 = 1; index2 < parentSubtasks.length; index2++) {
+          const order = updatedSubtasks[index2].order
+          const orderBefore = updatedOrders[index2 - 1]
+          if (typeof order !== 'number' || order <= orderBefore) {
+            const orderAfter = updatedSubtasks[index2 + 1]?.order
+            const oneHigherOrMax = safeAddition(orderBefore, 1)
+            const updatedOrder =
+              typeof orderAfter === 'number'
+                ? Math.max(
+                    Math.round(orderBefore + orderAfter) / 2,
+                    oneHigherOrMax
+                  )
+                : oneHigherOrMax
+            updatedOrders[index2] = updatedOrder
+          } else {
+            updatedOrders[index2] = order
+          }
+        }
+
+        const promises: Promise<any>[] = []
+
+        for (let index2 = updatedSubtasks.length - 1; index2 >= 0; index2--) {
+          if (updatedSubtasks[index2].order !== updatedOrders[index2]) {
+            promises.push(
+              DataStore.save(
+                Task.copyOf(updatedSubtasks[index2], updated => {
+                  if (updatedSubtasks[index2].id === task.id) {
+                    updated.parentTaskID = parentTask ? parentTask.id : null
+                  }
+                  updated.order = updatedOrders[index2]
+                })
+              )
+            )
+          }
+        }
+
+        await Promise.all(promises)
+      } else {
+        await DataStore.save(
           Task.copyOf(task, updated => {
+            updated.parentTaskID = parentTask.id
             updated.order = 0
           })
-        ),
-        DataStore.save(
-          Task.copyOf(task2, updated => {
-            updated.parentTaskID = task.parentTaskID
-            updated.order = 1
-          })
-        ),
-      ])
-    }
-  }, [])
+        )
+      }
+    },
+    [subtasks]
+  )
+
+  const insertAfter = useCallback(
+    async function (parentTask, task, taskBefore) {
+      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
+      const index = parentSubtasks.indexOf(taskBefore) + 1
+      await insertAt(parentTask, task, index)
+    },
+    [insertAt, subtasks]
+  )
+
+  const onDrop = useCallback(
+    async function onDrop(task: Task, task2) {
+      if (hasSubtasks(task)) {
+        await insertAt(task, task2, 0)
+      } else {
+        await insertAfter(
+          task.parentTaskID ? idToTask.get(task.parentTaskID) : null,
+          task2,
+          task
+        )
+      }
+    },
+    [hasSubtasks, insertAfter, insertAt, idToTask]
+  )
 
   return (
     <div>
