@@ -490,15 +490,14 @@ function TaskItem({ task, onDrop }) {
 
   const isEditModeEnabled = useContext(EditModeContext)
 
-  const draggableRef = useRef<HTMLDivElement>(null)
+  const draggableRef = useRef<HTMLDivElement | null>(null)
 
   const [isDragging2, setIsDragging2] = useState(false)
 
   useEffect(function () {
     let handle: NodeJS.Timeout | null = null
 
-    function onPointerDown(event) {
-      event.preventDefault()
+    function onPointerDown() {
       handle = setTimeout(function () {
         setIsDragging2(true)
       }, DRAG_DELAY)
