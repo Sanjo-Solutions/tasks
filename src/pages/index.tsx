@@ -70,7 +70,7 @@ class App2 extends React.Component<
     if (this.maxOrder === null) {
       return 0
     } else {
-      return this.maxOrder <= MAX_INT - GAP ? this.maxOrder + GAP : MAX_INT
+      return safeAddition(this.maxOrder, GAP)
     }
   }
 
