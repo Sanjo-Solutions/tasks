@@ -16,11 +16,13 @@ export const onCreateTask = /* GraphQL */ `subscription OnCreateTask(
     id
     description
     completed
+    order
     parentTaskID
     parentTask {
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -56,11 +58,13 @@ export const onUpdateTask = /* GraphQL */ `subscription OnUpdateTask(
     id
     description
     completed
+    order
     parentTaskID
     parentTask {
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt
@@ -96,11 +100,13 @@ export const onDeleteTask = /* GraphQL */ `subscription OnDeleteTask(
     id
     description
     completed
+    order
     parentTaskID
     parentTask {
       id
       description
       completed
+      order
       parentTaskID
       createdAt
       updatedAt

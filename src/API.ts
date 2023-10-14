@@ -6,6 +6,7 @@ export type CreateTaskInput = {
   id?: string | null,
   description: string,
   completed?: boolean | null,
+  order?: number | null,
   parentTaskID?: string | null,
   _version?: number | null,
 };
@@ -13,6 +14,7 @@ export type CreateTaskInput = {
 export type ModelTaskConditionInput = {
   description?: ModelStringInput | null,
   completed?: ModelBooleanInput | null,
+  order?: ModelIntInput | null,
   parentTaskID?: ModelIDInput | null,
   and?: Array< ModelTaskConditionInput | null > | null,
   or?: Array< ModelTaskConditionInput | null > | null,
@@ -67,6 +69,18 @@ export type ModelBooleanInput = {
   attributeType?: ModelAttributeTypes | null,
 };
 
+export type ModelIntInput = {
+  ne?: number | null,
+  eq?: number | null,
+  le?: number | null,
+  lt?: number | null,
+  ge?: number | null,
+  gt?: number | null,
+  between?: Array< number | null > | null,
+  attributeExists?: boolean | null,
+  attributeType?: ModelAttributeTypes | null,
+};
+
 export type ModelIDInput = {
   ne?: string | null,
   eq?: string | null,
@@ -88,6 +102,7 @@ export type Task = {
   id: string,
   description: string,
   completed?: boolean | null,
+  order?: number | null,
   parentTaskID?: string | null,
   parentTask?: Task | null,
   subtasks?: ModelTaskConnection | null,
@@ -110,6 +125,7 @@ export type UpdateTaskInput = {
   id: string,
   description?: string | null,
   completed?: boolean | null,
+  order?: number | null,
   parentTaskID?: string | null,
   _version?: number | null,
 };
@@ -123,11 +139,21 @@ export type ModelTaskFilterInput = {
   id?: ModelIDInput | null,
   description?: ModelStringInput | null,
   completed?: ModelBooleanInput | null,
+  order?: ModelIntInput | null,
   parentTaskID?: ModelIDInput | null,
   and?: Array< ModelTaskFilterInput | null > | null,
   or?: Array< ModelTaskFilterInput | null > | null,
   not?: ModelTaskFilterInput | null,
   _deleted?: ModelBooleanInput | null,
+};
+
+export type ModelIntKeyConditionInput = {
+  eq?: number | null,
+  le?: number | null,
+  lt?: number | null,
+  ge?: number | null,
+  gt?: number | null,
+  between?: Array< number | null > | null,
 };
 
 export enum ModelSortDirection {
@@ -140,6 +166,7 @@ export type ModelSubscriptionTaskFilterInput = {
   id?: ModelSubscriptionIDInput | null,
   description?: ModelSubscriptionStringInput | null,
   completed?: ModelSubscriptionBooleanInput | null,
+  order?: ModelSubscriptionIntInput | null,
   parentTaskID?: ModelSubscriptionIDInput | null,
   and?: Array< ModelSubscriptionTaskFilterInput | null > | null,
   or?: Array< ModelSubscriptionTaskFilterInput | null > | null,
@@ -181,6 +208,18 @@ export type ModelSubscriptionBooleanInput = {
   eq?: boolean | null,
 };
 
+export type ModelSubscriptionIntInput = {
+  ne?: number | null,
+  eq?: number | null,
+  le?: number | null,
+  lt?: number | null,
+  ge?: number | null,
+  gt?: number | null,
+  between?: Array< number | null > | null,
+  in?: Array< number | null > | null,
+  notIn?: Array< number | null > | null,
+};
+
 export type CreateTaskMutationVariables = {
   input: CreateTaskInput,
   condition?: ModelTaskConditionInput | null,
@@ -192,12 +231,14 @@ export type CreateTaskMutation = {
     id: string,
     description: string,
     completed?: boolean | null,
+    order?: number | null,
     parentTaskID?: string | null,
     parentTask?:  {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -231,12 +272,14 @@ export type UpdateTaskMutation = {
     id: string,
     description: string,
     completed?: boolean | null,
+    order?: number | null,
     parentTaskID?: string | null,
     parentTask?:  {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -270,12 +313,14 @@ export type DeleteTaskMutation = {
     id: string,
     description: string,
     completed?: boolean | null,
+    order?: number | null,
     parentTaskID?: string | null,
     parentTask?:  {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -308,12 +353,14 @@ export type GetTaskQuery = {
     id: string,
     description: string,
     completed?: boolean | null,
+    order?: number | null,
     parentTaskID?: string | null,
     parentTask?:  {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -350,6 +397,7 @@ export type ListTasksQuery = {
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -378,6 +426,7 @@ export type SyncTasksQuery = {
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -391,22 +440,24 @@ export type SyncTasksQuery = {
   } | null,
 };
 
-export type TasksByParentTaskIDQueryVariables = {
+export type TasksByParentTaskIDAndOrderQueryVariables = {
   parentTaskID: string,
+  order?: ModelIntKeyConditionInput | null,
   sortDirection?: ModelSortDirection | null,
   filter?: ModelTaskFilterInput | null,
   limit?: number | null,
   nextToken?: string | null,
 };
 
-export type TasksByParentTaskIDQuery = {
-  tasksByParentTaskID?:  {
+export type TasksByParentTaskIDAndOrderQuery = {
+  tasksByParentTaskIDAndOrder?:  {
     __typename: "ModelTaskConnection",
     items:  Array< {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -431,12 +482,14 @@ export type OnCreateTaskSubscription = {
     id: string,
     description: string,
     completed?: boolean | null,
+    order?: number | null,
     parentTaskID?: string | null,
     parentTask?:  {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -470,12 +523,14 @@ export type OnUpdateTaskSubscription = {
     id: string,
     description: string,
     completed?: boolean | null,
+    order?: number | null,
     parentTaskID?: string | null,
     parentTask?:  {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,
@@ -509,12 +564,14 @@ export type OnDeleteTaskSubscription = {
     id: string,
     description: string,
     completed?: boolean | null,
+    order?: number | null,
     parentTaskID?: string | null,
     parentTask?:  {
       __typename: "Task",
       id: string,
       description: string,
       completed?: boolean | null,
+      order?: number | null,
       parentTaskID?: string | null,
       createdAt: string,
       updatedAt: string,

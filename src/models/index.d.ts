@@ -14,6 +14,7 @@ type EagerTask = {
   readonly id: string;
   readonly description: string;
   readonly completed?: boolean | null;
+  readonly order?: number | null;
   readonly parentTaskID?: string | null;
   readonly parentTask?: Task | null;
   readonly subtasks?: (Task | null)[] | null;
@@ -29,6 +30,7 @@ type LazyTask = {
   readonly id: string;
   readonly description: string;
   readonly completed?: boolean | null;
+  readonly order?: number | null;
   readonly parentTaskID?: string | null;
   readonly parentTask: AsyncItem<Task | undefined>;
   readonly subtasks: AsyncCollection<Task>;
