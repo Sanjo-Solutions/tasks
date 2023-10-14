@@ -1,22 +1,20 @@
-import nextPWA from 'next-pwa'
-import remarkGfm from 'remark-gfm'
-import remarkHeadingId from 'remark-heading-id'
-import createMDX from '@next/mdx'
+import nextPWA from "next-pwa"
+import createMDX from "@next/mdx"
+import { mdxOptions } from "./src/mdxOptions.mjs"
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  pageExtensions: ['js', 'jsx', 'mdx', 'ts', 'tsx'],
+  pageExtensions: ["js", "jsx", "mdx", "ts", "tsx"],
 }
 
 const withMDX = createMDX({
   options: {
-    remarkPlugins: [remarkGfm, [remarkHeadingId, { defaults: true }]],
-    rehypePlugins: [],
+    ...mdxOptions,
   },
 })
 
 const withPWA = nextPWA({
-  dest: 'public',
+  dest: "public",
 })
 
 export default withPWA(withMDX(nextConfig))

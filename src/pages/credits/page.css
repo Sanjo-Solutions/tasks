@@ -1,0 +1,49 @@
+.credit {
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border-radius: 3px;
+}
+
+.credit:last-child {
+  margin-bottom: 0;
+}
+
+.credit__header {
+  display: flex;
+  flex-direction: row;
+}
+
+.credit__head-line {
+  flex: 1 1 auto;
+  font-weight: bold;
+}
+
+.credit__links {
+  flex: 0 0 auto;
+}
+
+.credit__toggle-show-license {
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.credit__toggle-show-info {
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.credit__url {
+  display: inline-block;
+}
+
+.credit__license {
+  display: none;
+  margin-top: 0.5rem;
+  max-width: 39rem;
+}
+
+.credit__info {
+  display: none;
+  margin-top: 0.5rem;
+  max-width: 39rem;
+}
