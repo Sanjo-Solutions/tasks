@@ -4,10 +4,10 @@ import { Task } from "../models"
 import React, { createContext, useCallback, useContext, useState } from "react"
 import awsExports from "../aws-exports"
 import { DndProvider, DropTargetMonitor, useDrag, useDrop } from "react-dnd"
-import { HTML5Backend } from "react-dnd-html5-backend"
-import { classNames } from "../classNames"
 import { OpType } from "@aws-amplify/datastore"
 import { last, pick, sortedIndexBy } from "lodash-es"
+import { TouchBackend } from "react-dnd-touch-backend"
+import { clsx } from "clsx"
 
 function safeSubtraction(a: number, b: number): number {
   if (a >= MIN_INT + b) {
@@ -172,7 +172,7 @@ class App2 extends React.Component<
 
 function App({ signOut }) {
   const [isEditModeEnabled, setIsEditModeEnabled] = useState(
-    localStorage.getItem("isEditModeEnabled") !== "false"
+    localStorage.getItem("isEditModeEnabled") !== "false",
   )
   const { subtasks, generateOrderForNewTask } = useContext(TasksContext)
 
@@ -181,7 +181,7 @@ function App({ signOut }) {
     const description = event.target.elements.description.value
     if (description.trim()) {
       const task = await DataStore.save(
-        new Task({ description, order: generateOrderForNewTask(null) })
+        new Task({ description, order: generateOrderForNewTask(null) }),
       )
       event.target.reset()
     }
@@ -203,7 +203,7 @@ function App({ signOut }) {
       }
       return convertedTasks
     },
-    [subtasks]
+    [subtasks],
   )
 
   const onExport = useCallback(
@@ -215,8 +215,8 @@ function App({ signOut }) {
       a.setAttribute(
         "href",
         `data:application/json;charset=utf-8,${encodeURIComponent(
-          JSON.stringify(exportData, null, 2) + "\n"
-        )}`
+          JSON.stringify(exportData, null, 2) + "\n",
+        )}`,
       )
       a.setAttribute("download", "tasks.json")
       a.style.display = "none"
@@ -224,11 +224,11 @@ function App({ signOut }) {
       a.click()
       document.body.removeChild(a)
     },
-    [subtasks, convertTasksToJSON]
+    [subtasks, convertTasksToJSON],
   )
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true }}>
       <EditModeContext.Provider value={isEditModeEnabled}>
         <div className="container ps-0 pe-3">
           <div className="mt-3 text-end">
@@ -300,7 +300,7 @@ function TaskList({ tasks }) {
       const taskSubtasks = subtasks.get(task.id)
       return Boolean(taskSubtasks && taskSubtasks.length >= 1)
     },
-    [subtasks]
+    [subtasks],
   )
 
   const insertAt = useCallback(
@@ -309,7 +309,7 @@ function TaskList({ tasks }) {
       if (parentSubtasks && parentSubtasks.length >= 1) {
         const updatedSubtasks = Array.from(parentSubtasks)
         const indexBefore = updatedSubtasks.findIndex(
-          (task2) => task2.id === task.id
+          (task2) => task2.id === task.id,
         )
         updatedSubtasks.splice(index, 0, task)
         if (indexBefore !== -1) {
@@ -352,7 +352,7 @@ function TaskList({ tasks }) {
               typeof orderAfter === "number"
                 ? Math.max(
                     Math.round((orderBefore + orderAfter) / 2),
-                    oneHigherOrMax
+                    oneHigherOrMax,
                   )
                 : oneHigherOrMax
             updatedOrders[index2] = updatedOrder
@@ -372,8 +372,8 @@ function TaskList({ tasks }) {
                     updated.parentTaskID = parentTask ? parentTask.id : null
                   }
                   updated.order = updatedOrders[index2]
-                })
-              )
+                }),
+              ),
             )
           }
         }
@@ -384,11 +384,11 @@ function TaskList({ tasks }) {
           Task.copyOf(task, (updated) => {
             updated.parentTaskID = parentTask.id
             updated.order = 0
-          })
+          }),
         )
       }
     },
-    [subtasks]
+    [subtasks],
   )
 
   const insertAfter = useCallback(
@@ -397,7 +397,7 @@ function TaskList({ tasks }) {
       const index = parentSubtasks.indexOf(taskBefore) + 1
       await insertAt(parentTask, task, index)
     },
-    [insertAt, subtasks]
+    [insertAt, subtasks],
   )
 
   const onDrop = useCallback(
@@ -408,11 +408,11 @@ function TaskList({ tasks }) {
         await insertAfter(
           task.parentTaskID ? idToTask.get(task.parentTaskID) : null,
           task2,
-          task
+          task,
         )
       }
     },
-    [hasSubtasks, insertAfter, insertAt, idToTask]
+    [hasSubtasks, insertAfter, insertAt, idToTask],
   )
 
   return (
@@ -432,10 +432,10 @@ function TaskItem({ task, onDrop }) {
       await DataStore.save(
         Task.copyOf(task, (updated) => {
           updated.completed = event.target.checked
-        })
+        }),
       )
     },
-    [task]
+    [task],
   )
 
   const onCheckBoxAreaClicked = useCallback(
@@ -443,10 +443,10 @@ function TaskItem({ task, onDrop }) {
       await DataStore.save(
         Task.copyOf(task, (updated) => {
           updated.completed = !task.completed
-        })
+        }),
       )
     },
-    [task]
+    [task],
   )
 
   const onCheckBoxClicked = useCallback((event) => {
@@ -466,29 +466,35 @@ function TaskItem({ task, onDrop }) {
           description: formData.get("description") as string,
           parentTask: task,
           order: generateOrderForNewTask(task.id),
-        })
+        }),
       )
       event.target.querySelector('input[name="description"]').value = ""
     },
-    [task, generateOrderForNewTask]
+    [task, generateOrderForNewTask],
   )
 
   const isEditModeEnabled = useContext(EditModeContext)
 
-  const [{ opacity }, dragRef] = useDrag(
+  const [{ difference, isDragging }, dragRef] = useDrag(
     () => ({
       type: ItemTypes.TASK,
       item: task,
-      collect: (monitor) => ({
-        opacity: monitor.isDragging() ? 0.5 : 1,
-      }),
+      collect: (monitor) => {
+        return {
+          difference: monitor.getDifferenceFromInitialOffset(),
+          isDragging: monitor.isDragging(),
+        }
+      },
     }),
-    [task]
+    [task],
   )
 
   const [{ isOver }, dropRef] = useDrop(
     () => ({
       accept: ItemTypes.TASK,
+      canDrop(task2: Task) {
+        return task2.id !== task.id
+      },
       drop: onDrop.bind(null, task),
       collect: (monitor: DropTargetMonitor) => {
         return {
@@ -496,7 +502,7 @@ function TaskItem({ task, onDrop }) {
         }
       },
     }),
-    [task]
+    [task],
   )
 
   const refCallback = useCallback(
@@ -504,15 +510,24 @@ function TaskItem({ task, onDrop }) {
       dragRef(node)
       dropRef(node)
     },
-    [dragRef, dropRef]
+    [dragRef, dropRef],
   )
 
   return (
     <div className="task">
       <div
-        className={classNames("row", isOver && "insert-below")}
+        className={clsx("row", "w-100", "bg-white", isOver && "insert-below")}
         ref={refCallback}
-        style={{ opacity }}
+        style={
+          isDragging
+            ? {
+                position: "relative",
+                zIndex: 9999,
+                transform: `translate(${difference!.x}px, ${difference!.y}px)`,
+                pointerEvents: "none",
+              }
+            : {}
+        }
       >
         <div className="col-auto d-flex align-items-center">
           <div className="p-3 flex-grow-1" onClick={onCheckBoxAreaClicked}>
