@@ -3,6 +3,6 @@ import { mdxOptions } from "./mdxOptions.mjs"
 
 export async function serializeMDX(content: string) {
   return await serialize(content, {
-    mdxOptions,
+    mdxOptions: mdxOptions as any,
   })
 }
