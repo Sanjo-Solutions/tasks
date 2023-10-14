@@ -1,35 +1,27 @@
 import { withAuthenticator } from "@aws-amplify/ui-react"
-import { DataStore, Amplify, SortDirection } from "aws-amplify"
-import { LazyTask, Task } from "../models"
-import {
-  useState,
-  useEffect,
-  useCallback,
-  createContext,
-  useContext,
-} from "react"
+import { Amplify, DataStore } from "aws-amplify"
+import { Task } from "../models"
+import React, { createContext, useCallback, useContext, useState } from "react"
 import awsExports from "../aws-exports"
-import React from "react"
-import { DropTargetMonitor, useDrag, useDrop } from "react-dnd"
-import { DndProvider } from "react-dnd"
+import { DndProvider, DropTargetMonitor, useDrag, useDrop } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
 import { classNames } from "../classNames"
 import { OpType } from "@aws-amplify/datastore"
-import { sortedIndexBy, pick } from "lodash-es"
+import { pick, sortedIndexBy } from "lodash-es"
 
 function safeSubtraction(a: number, b: number): number {
-  if (a >= Number.MIN_SAFE_INTEGER + b) {
+  if (a >= MIN_INT + b) {
     return a - b
   } else {
-    return Number.MIN_SAFE_INTEGER
+    return MIN_INT
   }
 }
 
 function safeAddition(a: number, b: number): number {
-  if (a <= Number.MAX_SAFE_INTEGER - b) {
+  if (a <= MAX_INT - b) {
     return a + b
   } else {
-    return Number.MAX_SAFE_INTEGER
+    return MAX_INT
   }
 }
 
@@ -53,7 +45,9 @@ const TasksContext = createContext<{
 
 const EditModeContext = createContext<boolean>(true)
 
-const GAP = 10000000000
+const GAP = 2148
+const MIN_INT = -(2 ** 31)
+const MAX_INT = 2 ** 31 - 1
 
 class App2 extends React.Component<
   { signOut: any },
@@ -76,9 +70,9 @@ class App2 extends React.Component<
     if (this.maxOrder === null) {
       return 0
     } else {
-      return this.maxOrder <= Number.MAX_SAFE_INTEGER - GAP
+      return this.maxOrder <= MAX_INT - GAP
         ? this.maxOrder + GAP
-        : Number.MAX_SAFE_INTEGER
+        : MAX_INT
     }
   }
 
@@ -112,7 +106,9 @@ class App2 extends React.Component<
       }
     }
 
+    console.log('subscribe')
     this.subscription = DataStore.observe(Task).subscribe((message) => {
+      console.log('message', message)
       const task = message.element
       switch (message.opType) {
         case OpType.INSERT:
@@ -155,6 +151,7 @@ class App2 extends React.Component<
   }
 
   componentWillUnmount(): void {
+    console.log('unsubscribe')
     this.subscription.unsubscribe()
   }
 
