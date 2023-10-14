@@ -497,8 +497,7 @@ function TaskItem({ task, onDrop }) {
   useEffect(function () {
     let handle: NodeJS.Timeout | null = null
 
-    function onPointerDown(event) {
-      event.preventDefault()
+    function onPointerDown() {
       handle = setTimeout(function () {
         setIsDragging2(true)
       }, DRAG_DELAY)
