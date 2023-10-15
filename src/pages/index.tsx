@@ -324,12 +324,17 @@ function TaskList({ tasks }) {
 
   const insertAt = useCallback(
     async function (parentTask, task, index) {
-      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)
+      const parentTaskID = parentTask ? parentTask.id : null
+      const previousParentTaskID = task.parentTaskID ?? null
+      const parentSubtasks = subtasks.get(parentTaskID)
       if (parentSubtasks && parentSubtasks.length >= 1) {
         const updatedSubtasks = Array.from(parentSubtasks)
-        const indexBefore = updatedSubtasks.findIndex(
-          (task2) => task2.id === task.id,
-        )
+        let indexBefore = -1
+        if (previousParentTaskID === parentTaskID) {
+          indexBefore = updatedSubtasks.findIndex(
+            (task2) => task2.id === task.id,
+          )
+        }
         updatedSubtasks.splice(index, 0, task)
         if (indexBefore !== -1) {
           if (indexBefore < index) {
@@ -387,6 +392,7 @@ function TaskList({ tasks }) {
               DataStore.save(
                 Task.copyOf(updatedSubtasks[index2], (updated) => {
                   if (updatedSubtasks[index2].id === task.id) {
+                    console.log("parentTask", parentTask)
                     updated.parentTaskID = parentTask ? parentTask.id : null
                   }
                   updated.order = updatedOrders[index2]
@@ -410,9 +416,9 @@ function TaskList({ tasks }) {
   )
 
   const insertBefore = useCallback(
-    async function (parentTask, task, taskBefore) {
+    async function (parentTask, task, droppedOnTask) {
       const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
-      const index = parentSubtasks.indexOf(taskBefore)
+      const index = parentSubtasks.indexOf(droppedOnTask)
       await insertAt(parentTask, task, index)
     },
     [insertAt, subtasks],
@@ -433,18 +439,18 @@ function TaskList({ tasks }) {
       droppedTask: Task,
       location: Location,
     ) {
-      if (hasSubtasks(droppedOnTask)) {
-        await insertAt(droppedOnTask, droppedTask, 0)
-      } else {
-        if (location === Location.Above) {
-          await insertBefore(
-            droppedOnTask.parentTaskID
-              ? idToTask.get(droppedOnTask.parentTaskID)
-              : null,
-            droppedTask,
-            droppedOnTask,
-          )
-        } else if (location === Location.Below) {
+      if (location === Location.Above) {
+        await insertBefore(
+          droppedOnTask.parentTaskID
+            ? idToTask.get(droppedOnTask.parentTaskID)
+            : null,
+          droppedTask,
+          droppedOnTask,
+        )
+      } else if (location === Location.Below) {
+        if (hasSubtasks(droppedOnTask)) {
+          await insertAt(droppedOnTask, droppedTask, 0)
+        } else {
           await insertAfter(
             droppedOnTask.parentTaskID
               ? idToTask.get(droppedOnTask.parentTaskID)
@@ -663,8 +669,10 @@ function TaskItem({ task, onDrop }) {
                 position: "relative",
                 zIndex: 9999,
                 transform: `translate(${difference!.x}px, ${difference!.y}px)`,
-                pointerEvents: "none",
               }
+            : {}),
+          ...(isDragging || isDragging2
+            ? { userSelect: "none", pointerEvents: "none" }
             : {}),
         }}
       >
