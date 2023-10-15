@@ -18,6 +18,11 @@ import { clsx } from "clsx"
 
 const DRAG_DELAY = 300
 
+enum Location {
+  Above = 1,
+  Below = 2,
+}
+
 function safeSubtraction(a: number, b: number): number {
   if (a >= MIN_INT + b) {
     return a - b
@@ -189,7 +194,7 @@ function App({ signOut }) {
     event.preventDefault()
     const description = event.target.elements.description.value
     if (description.trim()) {
-      const task = await DataStore.save(
+      await DataStore.save(
         new Task({ description, order: generateOrderForNewTask(null) }),
       )
       event.target.reset()
@@ -363,14 +368,13 @@ function TaskList({ tasks }) {
           if (typeof order !== "number" || order <= orderBefore) {
             const orderAfter = updatedSubtasks[index2 + 1]?.order
             const oneHigherOrMax = safeAddition(orderBefore, 1)
-            const updatedOrder =
+            updatedOrders[index2] =
               typeof orderAfter === "number"
                 ? Math.max(
                     Math.round((orderBefore + orderAfter) / 2),
                     oneHigherOrMax,
                   )
                 : oneHigherOrMax
-            updatedOrders[index2] = updatedOrder
           } else {
             updatedOrders[index2] = order
           }
@@ -406,6 +410,15 @@ function TaskList({ tasks }) {
     [subtasks],
   )
 
+  const insertBefore = useCallback(
+    async function (parentTask, task, taskBefore) {
+      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
+      const index = parentSubtasks.indexOf(taskBefore)
+      await insertAt(parentTask, task, index)
+    },
+    [insertAt, subtasks],
+  )
+
   const insertAfter = useCallback(
     async function (parentTask, task, taskBefore) {
       const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
@@ -416,18 +429,34 @@ function TaskList({ tasks }) {
   )
 
   const onDrop = useCallback(
-    async function onDrop(task: Task, task2) {
-      if (hasSubtasks(task)) {
-        await insertAt(task, task2, 0)
+    async function onDrop(
+      droppedOnTask: Task,
+      droppedTask: Task,
+      location: Location,
+    ) {
+      if (hasSubtasks(droppedOnTask)) {
+        await insertAt(droppedOnTask, droppedTask, 0)
       } else {
-        await insertAfter(
-          task.parentTaskID ? idToTask.get(task.parentTaskID) : null,
-          task2,
-          task,
-        )
+        if (location === Location.Above) {
+          await insertBefore(
+            droppedOnTask.parentTaskID
+              ? idToTask.get(droppedOnTask.parentTaskID)
+              : null,
+            droppedTask,
+            droppedOnTask,
+          )
+        } else if (location === Location.Below) {
+          await insertAfter(
+            droppedOnTask.parentTaskID
+              ? idToTask.get(droppedOnTask.parentTaskID)
+              : null,
+            droppedTask,
+            droppedOnTask,
+          )
+        }
       }
     },
-    [hasSubtasks, insertAfter, insertAt, idToTask],
+    [hasSubtasks, insertBefore, insertAfter, insertAt, idToTask],
   )
 
   return (
@@ -453,16 +482,13 @@ function TaskItem({ task, onDrop }) {
     [task],
   )
 
-  const onCheckBoxAreaClicked = useCallback(
-    async (event) => {
-      await DataStore.save(
-        Task.copyOf(task, (updated) => {
-          updated.completed = !task.completed
-        }),
-      )
-    },
-    [task],
-  )
+  const onCheckBoxAreaClicked = useCallback(async () => {
+    await DataStore.save(
+      Task.copyOf(task, (updated) => {
+        updated.completed = !task.completed
+      }),
+    )
+  }, [task])
 
   const onCheckBoxClicked = useCallback((event) => {
     event.stopPropagation()
@@ -490,7 +516,7 @@ function TaskItem({ task, onDrop }) {
 
   const isEditModeEnabled = useContext(EditModeContext)
 
-  const draggableRef = useRef<HTMLDivElement | null>(null)
+  const taskRef = useRef<HTMLDivElement | null>(null)
 
   const [isDragging2, setIsDragging2] = useState(false)
 
@@ -503,7 +529,7 @@ function TaskItem({ task, onDrop }) {
       }, DRAG_DELAY)
     }
 
-    draggableRef.current!.addEventListener("pointerdown", onPointerDown)
+    taskRef.current!.addEventListener("pointerdown", onPointerDown)
 
     function cancelDragInitiation() {
       setIsDragging2(false)
@@ -533,18 +559,25 @@ function TaskItem({ task, onDrop }) {
 
     window.addEventListener("scroll", onScroll)
 
+    function onPointerOut() {
+      cancelDragInitiation()
+    }
+
+    taskRef.current!.addEventListener("pointerout", onPointerOut)
+
     return () => {
-      draggableRef.current!.removeEventListener("pointerdown", onPointerDown)
+      taskRef.current!.removeEventListener("pointerdown", onPointerDown)
       window.removeEventListener("pointerup", onPointerUp)
       window.removeEventListener("contextmenu", onContextMenu)
       window.removeEventListener("scroll", onScroll)
+      taskRef.current!.removeEventListener("pointerout", onPointerOut)
     }
   }, [])
 
   const [{ difference, isDragging }, dragRef] = useDrag(
     () => ({
       type: ItemTypes.TASK,
-      item: task,
+      item: { task, taskRef },
       collect: (monitor) => {
         return {
           difference: monitor.getDifferenceFromInitialOffset(),
@@ -552,32 +585,62 @@ function TaskItem({ task, onDrop }) {
         }
       },
     }),
-    [task],
+    [task, taskRef],
   )
 
-  const [{ isOver }, dropRef] = useDrop(
+  const determineDropLocation = useCallback(
+    function determineDropLocation(monitor: DropTargetMonitor) {
+      if (monitor.isOver()) {
+        const item = monitor.getItem<{
+          taskRef: React.MutableRefObject<HTMLDivElement | null>
+        }>()
+        const y = monitor.getSourceClientOffset()?.y
+        if (item && y) {
+          const draggedTaskRef = item.taskRef
+          const draggedVerticalCenterY =
+            y + 0.5 * draggedTaskRef.current!.clientHeight
+          const draggedOverTaskRef = taskRef
+          const draggedOverY = draggedOverTaskRef.current!.offsetTop
+          const height = draggedOverTaskRef.current!.clientHeight
+          const draggedOverVerticalCenterY = draggedOverY + 0.5 * height
+          return draggedVerticalCenterY < draggedOverVerticalCenterY
+            ? Location.Above
+            : Location.Below
+        } else {
+          return null
+        }
+      }
+    },
+    [taskRef],
+  )
+
+  const [{ insertAbove, insertBelow }, dropRef] = useDrop(
     () => ({
       accept: ItemTypes.TASK,
-      canDrop(task2: Task) {
+      canDrop({ task: task2 }: { task: Task }) {
         return task2.id !== task.id
       },
-      drop: onDrop.bind(null, task),
+      drop({ task: droppedTask }: { task: Task }, monitor) {
+        onDrop(task, droppedTask, determineDropLocation(monitor))
+      },
       collect: (monitor: DropTargetMonitor) => {
+        const location = determineDropLocation(monitor)
         return {
-          isOver: monitor.isOver(),
+          insertAbove: location === Location.Above,
+          insertBelow: location === Location.Below,
         }
       },
     }),
-    [task],
+    [task, determineDropLocation],
   )
 
   const refCallback = useCallback(
     (node) => {
-      draggableRef.current = node
+      taskRef.current = node
       dragRef(node)
       dropRef(node)
     },
-    [dragRef, dropRef],
+    [dragRef, dropRef, taskRef],
   )
 
   return (
@@ -587,19 +650,22 @@ function TaskItem({ task, onDrop }) {
           "row",
           "w-100",
           isDragging2 && "bg-body-tertiary",
-          isOver && "insert-below",
+          insertAbove && "insert-above",
+          insertBelow && "insert-below",
         )}
         ref={refCallback}
-        style={
-          isDragging
+        style={{
+          borderTop: "2px solid transparent",
+          borderBottom: "2px solid transparent",
+          ...(isDragging
             ? {
                 position: "relative",
                 zIndex: 9999,
                 transform: `translate(${difference!.x}px, ${difference!.y}px)`,
                 pointerEvents: "none",
               }
-            : {}
-        }
+            : {}),
+        }}
       >
         <div className="col-auto d-flex align-items-center">
           <div className="p-3 flex-grow-1" onClick={onCheckBoxAreaClicked}>
@@ -609,7 +675,7 @@ function TaskItem({ task, onDrop }) {
               onChange={onToggleCompleted}
               onClick={onCheckBoxClicked}
               className="d-block mt-0"
-              style={{ width: "1.5rem", height: "1.5rem" }}
+              style={{ width: "1.5rem", height: "1.25rem" }}
             />
           </div>
           <label className="form-check-label">{task.description}</label>
@@ -619,8 +685,8 @@ function TaskItem({ task, onDrop }) {
             <div
               onClick={onDelete}
               style={{
-                paddingTop: "0.375rem",
-                paddingBottom: "0.375rem",
+                paddingTop: "0.25rem",
+                paddingBottom: "0.25rem",
                 paddingLeft: "0.75rem",
                 paddingRight: "0.75rem",
                 cursor: "pointer",

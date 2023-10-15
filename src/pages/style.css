@@ -1,7 +1,8 @@
-.insert-below {
-  border-bottom: 2px solid blue;
+.insert-above {
+  border-top-color: blue !important;
 }
 
-.insert-above {
-  border-top: 2px solid blue;
+.insert-below {
+  border-bottom-color: blue !important;
 }
+
