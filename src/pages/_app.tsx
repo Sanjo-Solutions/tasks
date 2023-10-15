@@ -26,15 +26,15 @@ export default function App({ Component, pageProps }: AppProps) {
         <footer className="footer mt-auto py-3 bg-light">
           <div className="container">
             <div className="row">
-              <div className="col-12 col-md text-end mt-4 mt-md-0">
+              <div className="col text-end mt-0">
                 <ol className="footer-link-list list-inline mb-0">
-                  <li className="list-inline-item d-block d-md-inline-block text-center text-md-start me-0 me-md-3">
+                  <li className="list-inline-item d-inline-block me-3">
                     <Link href="/imprint">Imprint</Link>
                   </li>
-                  <li className="list-inline-item d-block d-md-inline-block text-center text-md-start me-0 me-md-3">
+                  <li className="list-inline-item d-inline-block me-3">
                     <Link href="/privacy-policy">Privacy Policy</Link>
                   </li>
-                  <li className="list-inline-item d-block d-md-inline-block text-center text-md-start me-0 me-md-3">
+                  <li className="list-inline-item d-inline-block me-3">
                     <Link href="/credits">Credits</Link>
                   </li>
                 </ol>
