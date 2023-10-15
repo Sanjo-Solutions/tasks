@@ -247,6 +247,7 @@ function App({ signOut }) {
       options={{
         enableMouseEvents: true,
         delayTouchStart: DRAG_DELAY,
+        ignoreContextMenu: true,
       }}
     >
       <EditModeContext.Provider value={isEditModeEnabled}>
