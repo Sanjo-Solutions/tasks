@@ -250,8 +250,8 @@ function App({ signOut }) {
       }}
     >
       <EditModeContext.Provider value={isEditModeEnabled}>
-        <div className="container ps-0 pe-3">
-          <div className="mt-3 text-end">
+        <div className="container pb-3">
+          <div className="p-3 text-end">
             <input
               type="checkbox"
               className="btn-check"
@@ -284,9 +284,8 @@ function App({ signOut }) {
           {isEditModeEnabled && (
             <form
               onSubmit={handleAddTask}
-              className="ms-3"
+              className="mx-3"
               style={{
-                marginTop: "0.4375rem",
                 paddingTop: "0.5625rem",
                 paddingBottom: "0.5625rem",
               }}
@@ -600,9 +599,11 @@ function TaskItem({ task, onDrop }) {
           const draggedVerticalCenterY =
             y + 0.5 * draggedTaskRef.current!.clientHeight
           const draggedOverTaskRef = taskRef
-          const draggedOverY = draggedOverTaskRef.current!.offsetTop
+          const { y: draggedOverY } =
+            draggedOverTaskRef.current!.getBoundingClientRect()
           const height = draggedOverTaskRef.current!.clientHeight
           const draggedOverVerticalCenterY = draggedOverY + 0.5 * height
+          console.log(draggedVerticalCenterY, draggedOverVerticalCenterY)
           return draggedVerticalCenterY < draggedOverVerticalCenterY
             ? Location.Above
             : Location.Below
@@ -648,8 +649,9 @@ function TaskItem({ task, onDrop }) {
       <div
         className={clsx(
           "row",
+          "gx-0",
           "w-100",
-          isDragging2 && "bg-body-tertiary",
+          (isDragging || isDragging2) && "bg-body-tertiary",
           insertAbove && "insert-above",
           insertBelow && "insert-below",
         )}
@@ -668,14 +670,23 @@ function TaskItem({ task, onDrop }) {
         }}
       >
         <div className="col-auto d-flex align-items-center">
-          <div className="p-3 flex-grow-1" onClick={onCheckBoxAreaClicked}>
+          <div
+            className="flex-grow-1"
+            onClick={onCheckBoxAreaClicked}
+            style={{
+              paddingTop: "1.1875rem",
+              paddingBottom: "1.1875rem",
+              paddingLeft: "1.1875rem",
+              paddingRight: "1.1875rem",
+            }}
+          >
             <input
               type="checkbox"
               checked={Boolean(task.completed)}
               onChange={onToggleCompleted}
               onClick={onCheckBoxClicked}
               className="d-block mt-0"
-              style={{ width: "1.5rem", height: "1.25rem" }}
+              style={{ width: "1.125rem", height: "1.125rem" }}
             />
           </div>
           <label className="form-check-label">{task.description}</label>
@@ -685,10 +696,10 @@ function TaskItem({ task, onDrop }) {
             <div
               onClick={onDelete}
               style={{
-                paddingTop: "0.25rem",
-                paddingBottom: "0.25rem",
-                paddingLeft: "0.75rem",
-                paddingRight: "0.75rem",
+                paddingTop: "1rem",
+                paddingBottom: "1rem",
+                paddingLeft: "1rem",
+                paddingRight: "1rem",
                 cursor: "pointer",
                 fontSize: "1.5rem",
               }}
@@ -706,7 +717,7 @@ function TaskItem({ task, onDrop }) {
           <form
             onSubmit={onAddSubtask}
             style={{ paddingTop: "0.5625rem", paddingBottom: "0.5625rem" }}
-            className="ms-3"
+            className="mx-3"
           >
             <div className="input-group">
               <input
