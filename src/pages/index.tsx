@@ -662,8 +662,6 @@ function TaskItem({ task, onDrop }) {
         )}
         ref={refCallback}
         style={{
-          borderTop: "2px solid transparent",
-          borderBottom: "2px solid transparent",
           ...(isDragging
             ? {
                 position: "relative",
@@ -703,8 +701,8 @@ function TaskItem({ task, onDrop }) {
             <div
               onClick={onDelete}
               style={{
-                paddingTop: "1rem",
-                paddingBottom: "1rem",
+                paddingTop: "0.625rem",
+                paddingBottom: "0.625rem",
                 paddingLeft: "1rem",
                 paddingRight: "1rem",
                 cursor: "pointer",
