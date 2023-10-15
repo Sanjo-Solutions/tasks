@@ -559,11 +559,18 @@ function TaskItem({ task, onDrop }) {
 
     window.addEventListener("scroll", onScroll)
 
+    function onPointerOut() {
+      cancelDragInitiation()
+    }
+
+    taskRef.current!.addEventListener("pointerout", onPointerOut)
+
     return () => {
       taskRef.current!.removeEventListener("pointerdown", onPointerDown)
       window.removeEventListener("pointerup", onPointerUp)
       window.removeEventListener("contextmenu", onContextMenu)
       window.removeEventListener("scroll", onScroll)
+      taskRef.current!.removeEventListener("pointerout", onPointerOut)
     }
   }, [])
 
