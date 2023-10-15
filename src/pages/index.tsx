@@ -387,12 +387,14 @@ function TaskList({ tasks }) {
         const promises: Promise<any>[] = []
 
         for (let index2 = updatedSubtasks.length - 1; index2 >= 0; index2--) {
-          if (updatedSubtasks[index2].order !== updatedOrders[index2]) {
+          const isOrderDifferent =
+            updatedSubtasks[index2].order !== updatedOrders[index2]
+          const isMovedTask = updatedSubtasks[index2].id === task.id
+          if (isOrderDifferent || isMovedTask) {
             promises.push(
               DataStore.save(
                 Task.copyOf(updatedSubtasks[index2], (updated) => {
-                  if (updatedSubtasks[index2].id === task.id) {
-                    console.log("parentTask", parentTask)
+                  if (isMovedTask) {
                     updated.parentTaskID = parentTask ? parentTask.id : null
                   }
                   updated.order = updatedOrders[index2]
@@ -438,26 +440,31 @@ function TaskList({ tasks }) {
       droppedOnTask: Task,
       droppedTask: Task,
       location: Location,
+      insertAsSubtask: boolean,
     ) {
-      if (location === Location.Above) {
-        await insertBefore(
-          droppedOnTask.parentTaskID
-            ? idToTask.get(droppedOnTask.parentTaskID)
-            : null,
-          droppedTask,
-          droppedOnTask,
-        )
-      } else if (location === Location.Below) {
-        if (hasSubtasks(droppedOnTask)) {
-          await insertAt(droppedOnTask, droppedTask, 0)
-        } else {
-          await insertAfter(
+      if (insertAsSubtask) {
+        await insertAt(droppedOnTask, droppedTask, 0)
+      } else {
+        if (location === Location.Above) {
+          await insertBefore(
             droppedOnTask.parentTaskID
               ? idToTask.get(droppedOnTask.parentTaskID)
               : null,
             droppedTask,
             droppedOnTask,
           )
+        } else if (location === Location.Below) {
+          if (hasSubtasks(droppedOnTask)) {
+            await insertAt(droppedOnTask, droppedTask, 0)
+          } else {
+            await insertAfter(
+              droppedOnTask.parentTaskID
+                ? idToTask.get(droppedOnTask.parentTaskID)
+                : null,
+              droppedTask,
+              droppedOnTask,
+            )
+          }
         }
       }
     },
@@ -600,7 +607,7 @@ function TaskItem({ task, onDrop }) {
           taskRef: React.MutableRefObject<HTMLDivElement | null>
         }>()
         const y = monitor.getSourceClientOffset()?.y
-        if (item && y) {
+        if (item && typeof y === "number") {
           const draggedTaskRef = item.taskRef
           const draggedVerticalCenterY =
             y + 0.5 * draggedTaskRef.current!.clientHeight
@@ -620,24 +627,63 @@ function TaskItem({ task, onDrop }) {
     [taskRef],
   )
 
-  const [{ insertAbove, insertBelow }, dropRef] = useDrop(
+  const determineIfToInsertAsSubtask = useCallback(
+    function determineIfToInsertAsSubtask(monitor: DropTargetMonitor) {
+      if (monitor.isOver()) {
+        const location = determineDropLocation(monitor)
+        if (location === Location.Below) {
+          const taskSubtasks = subtasks.get(task.id)
+          const hasSubtasks = Boolean(taskSubtasks && taskSubtasks.length >= 1)
+          if (hasSubtasks) {
+            return true
+          } else {
+            const item = monitor.getItem<{
+              taskRef: React.MutableRefObject<HTMLDivElement | null>
+            }>()
+            const draggedX = monitor.getSourceClientOffset()?.x
+            if (item && typeof draggedX === "number") {
+              const draggedOverTaskRef = taskRef
+              const { x: draggedOverX } =
+                draggedOverTaskRef.current!.getBoundingClientRect()
+              return draggedX >= draggedOverX + 100
+            } else {
+              return false
+            }
+          }
+        } else {
+          return false
+        }
+      } else {
+        return false
+      }
+    },
+    [task, taskRef, subtasks],
+  )
+
+  const [{ insertAbove, insertBelow, insertAsSubtask }, dropRef] = useDrop(
     () => ({
       accept: ItemTypes.TASK,
       canDrop({ task: task2 }: { task: Task }) {
         return task2.id !== task.id
       },
       drop({ task: droppedTask }: { task: Task }, monitor) {
-        onDrop(task, droppedTask, determineDropLocation(monitor))
+        onDrop(
+          task,
+          droppedTask,
+          determineDropLocation(monitor),
+          determineIfToInsertAsSubtask(monitor),
+        )
       },
       collect: (monitor: DropTargetMonitor) => {
         const location = determineDropLocation(monitor)
         return {
           insertAbove: location === Location.Above,
           insertBelow: location === Location.Below,
+          insertAsSubtask: determineIfToInsertAsSubtask(monitor),
         }
       },
     }),
-    [task, determineDropLocation],
+    [task, determineDropLocation, determineIfToInsertAsSubtask],
   )
 
   const refCallback = useCallback(
@@ -659,6 +705,7 @@ function TaskItem({ task, onDrop }) {
           (isDragging || isDragging2) && "bg-body-tertiary",
           insertAbove && "insert-above",
           insertBelow && "insert-below",
+          insertAsSubtask && "insert-as-subtask",
         )}
         ref={refCallback}
         style={{
