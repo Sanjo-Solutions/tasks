@@ -1,6 +1,18 @@
+body {
+  overflow-x: hidden;
+}
+
+.container, .container .row  {
+  --bs-gutter-x: 2rem;
+}
+
+.container-gx-0, .container-gx-0 .row  {
+  --bs-gutter-x: 0;
+}
+
 .insert-above:before {
   height: 2px;
-  background-color: blue;
+  background-color: var(--bs-primary);
   content: "";
   margin-top: -1px;
   position: absolute;
@@ -11,19 +23,11 @@
 
 .insert-below:after {
   height: 2px;
-  background-color: blue;
+  background-color: var(--bs-primary);
   content: "";
   margin-top: 55px;
   position: absolute;
   left: 0;
   right: 0;
   z-index: 10;
-}
-
-.container, .container .row  {
-  --bs-gutter-x: 2rem;
-}
-
-.container-gx-0, .container-gx-0 .row  {
-  --bs-gutter-x: 0;
 }
