@@ -251,7 +251,7 @@ function App({ signOut }) {
       }}
     >
       <EditModeContext.Provider value={isEditModeEnabled}>
-        <div className="container container-gx-0 pb-3">
+        <div className="container container-gx-0 pb-3 flex-grow-1 d-flex flex-column">
           <div className="p-3 text-end">
             <input
               type="checkbox"
@@ -305,184 +305,40 @@ function App({ signOut }) {
               </div>
             </form>
           )}
-          <TaskList tasks={subtasks.get(null) ?? []} />
+          <TaskList parentTask={null} tasks={subtasks.get(null) ?? []} />
         </div>
       </EditModeContext.Provider>
     </DndProvider>
   )
 }
 
-function TaskList({ tasks }) {
-  const { tasks: idToTask, subtasks } = useContext(TasksContext)
-
-  const hasSubtasks = useCallback(
-    function (task) {
-      const taskSubtasks = subtasks.get(task.id)
-      return Boolean(taskSubtasks && taskSubtasks.length >= 1)
-    },
-    [subtasks],
-  )
-
-  const insertAt = useCallback(
-    async function (parentTask, task, index) {
-      const parentTaskID = parentTask ? parentTask.id : null
-      const previousParentTaskID = task.parentTaskID ?? null
-      const parentSubtasks = subtasks.get(parentTaskID)
-      if (parentSubtasks && parentSubtasks.length >= 1) {
-        const updatedSubtasks = Array.from(parentSubtasks)
-        let indexBefore = -1
-        if (previousParentTaskID === parentTaskID) {
-          indexBefore = updatedSubtasks.findIndex(
-            (task2) => task2.id === task.id,
-          )
-        }
-        updatedSubtasks.splice(index, 0, task)
-        if (indexBefore !== -1) {
-          if (indexBefore < index) {
-            updatedSubtasks.splice(indexBefore, 1)
-          } else {
-            updatedSubtasks.splice(indexBefore + 1, 1)
-          }
-        }
-        const updatedOrders = new Array(updatedSubtasks.length)
-        const firstSubtask = updatedSubtasks[0]
-        if (typeof firstSubtask.order !== "number") {
-          if (
-            updatedSubtasks.length >= 2 &&
-            typeof updatedSubtasks[1]?.order === "number"
-          ) {
-            updatedOrders[0] = safeSubtraction(updatedSubtasks[1].order, GAP)
-          } else {
-            const orders = updatedSubtasks
-              .map((task) => task.order)
-              .filter((order) => typeof order === "number") as number[]
-            const smallestOrder =
-              orders.length >= 1
-                ? orders.reduce((previous, value) => Math.min(previous, value))
-                : null
-            updatedOrders[0] = smallestOrder
-              ? safeSubtraction(smallestOrder, GAP)
-              : 0
-          }
-        } else {
-          updatedOrders[0] = firstSubtask.order
-        }
-        for (let index2 = 1; index2 < updatedSubtasks.length; index2++) {
-          const order = updatedSubtasks[index2].order
-          const orderBefore = updatedOrders[index2 - 1]
-          if (typeof order !== "number" || order <= orderBefore) {
-            const orderAfter = updatedSubtasks[index2 + 1]?.order
-            const oneHigherOrMax = safeAddition(orderBefore, 1)
-            updatedOrders[index2] =
-              typeof orderAfter === "number"
-                ? Math.max(
-                    Math.round((orderBefore + orderAfter) / 2),
-                    oneHigherOrMax,
-                  )
-                : oneHigherOrMax
-          } else {
-            updatedOrders[index2] = order
-          }
-        }
-
-        const promises: Promise<any>[] = []
-
-        for (let index2 = updatedSubtasks.length - 1; index2 >= 0; index2--) {
-          const isOrderDifferent =
-            updatedSubtasks[index2].order !== updatedOrders[index2]
-          const isMovedTask = updatedSubtasks[index2].id === task.id
-          if (isOrderDifferent || isMovedTask) {
-            promises.push(
-              DataStore.save(
-                Task.copyOf(updatedSubtasks[index2], (updated) => {
-                  if (isMovedTask) {
-                    updated.parentTaskID = parentTask ? parentTask.id : null
-                  }
-                  updated.order = updatedOrders[index2]
-                }),
-              ),
-            )
-          }
-        }
-
-        await Promise.all(promises)
-      } else {
-        await DataStore.save(
-          Task.copyOf(task, (updated) => {
-            updated.parentTaskID = parentTask.id
-            updated.order = 0
-          }),
-        )
-      }
-    },
-    [subtasks],
-  )
-
-  const insertBefore = useCallback(
-    async function (parentTask, task, droppedOnTask) {
-      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
-      const index = parentSubtasks.indexOf(droppedOnTask)
-      await insertAt(parentTask, task, index)
-    },
-    [insertAt, subtasks],
-  )
-
-  const insertAfter = useCallback(
-    async function (parentTask, task, taskBefore) {
-      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
-      const index = parentSubtasks.indexOf(taskBefore) + 1
-      await insertAt(parentTask, task, index)
-    },
-    [insertAt, subtasks],
-  )
-
-  const onDrop = useCallback(
-    async function onDrop(
-      droppedOnTask: Task,
-      droppedTask: Task,
-      location: Location,
-      insertAsSubtask: boolean,
-    ) {
-      if (insertAsSubtask) {
-        await insertAt(droppedOnTask, droppedTask, 0)
-      } else {
-        if (location === Location.Above) {
-          await insertBefore(
-            droppedOnTask.parentTaskID
-              ? idToTask.get(droppedOnTask.parentTaskID)
-              : null,
-            droppedTask,
-            droppedOnTask,
-          )
-        } else if (location === Location.Below) {
-          if (hasSubtasks(droppedOnTask)) {
-            await insertAt(droppedOnTask, droppedTask, 0)
-          } else {
-            await insertAfter(
-              droppedOnTask.parentTaskID
-                ? idToTask.get(droppedOnTask.parentTaskID)
-                : null,
-              droppedTask,
-              droppedOnTask,
-            )
-          }
-        }
-      }
-    },
-    [hasSubtasks, insertBefore, insertAfter, insertAt, idToTask],
-  )
-
+function TaskList({
+  parentTask,
+  tasks,
+}: {
+  parentTask: Task | null
+  tasks: Task[]
+  className?: string
+}) {
   return (
-    <div>
-      {tasks.map((task) => (
-        <TaskItem key={task.id} task={task} onDrop={onDrop} />
+    <div className="flex-grow-1 d-flex flex-column">
+      {tasks.map((task, index) => (
+        <TaskItem
+          key={task.id}
+          task={task}
+          className={clsx(index === tasks.length - 1 && "flex-grow-1")}
+        />
       ))}
     </div>
   )
 }
 
-function TaskItem({ task, onDrop }) {
-  const { subtasks, generateOrderForNewTask } = useContext(TasksContext)
+function TaskItem({ task, className }) {
+  const {
+    tasks: idToTask,
+    subtasks,
+    generateOrderForNewTask,
+  } = useContext(TasksContext)
 
   const onToggleCompleted = useCallback(
     async (event) => {
@@ -623,6 +479,8 @@ function TaskItem({ task, onDrop }) {
         } else {
           return null
         }
+      } else {
+        return null
       }
     },
     [taskRef],
@@ -661,6 +519,163 @@ function TaskItem({ task, onDrop }) {
     [task, taskRef, subtasks, determineDropLocation],
   )
 
+  const hasSubtasks = useCallback(
+    function (task) {
+      const taskSubtasks = subtasks.get(task.id)
+      return Boolean(taskSubtasks && taskSubtasks.length >= 1)
+    },
+    [subtasks],
+  )
+
+  const insertAt = useCallback(
+    async function (parentTask, task, index) {
+      const parentTaskID = parentTask ? parentTask.id : null
+      const previousParentTaskID = task.parentTaskID ?? null
+      const parentSubtasks = subtasks.get(parentTaskID)
+      if (parentSubtasks && parentSubtasks.length >= 1) {
+        const updatedSubtasks = Array.from(parentSubtasks)
+        let indexBefore = -1
+        if (previousParentTaskID === parentTaskID) {
+          indexBefore = updatedSubtasks.findIndex(
+            (task2) => task2.id === task.id,
+          )
+        }
+        updatedSubtasks.splice(index, 0, task)
+        if (indexBefore !== -1) {
+          if (indexBefore < index) {
+            updatedSubtasks.splice(indexBefore, 1)
+          } else {
+            updatedSubtasks.splice(indexBefore + 1, 1)
+          }
+        }
+        const updatedOrders = new Array(updatedSubtasks.length)
+        const firstSubtask = updatedSubtasks[0]
+        if (typeof firstSubtask.order !== "number") {
+          if (
+            updatedSubtasks.length >= 2 &&
+            typeof updatedSubtasks[1]?.order === "number"
+          ) {
+            updatedOrders[0] = safeSubtraction(updatedSubtasks[1].order, GAP)
+          } else {
+            const orders = updatedSubtasks
+              .map((task) => task.order)
+              .filter((order) => typeof order === "number") as number[]
+            const smallestOrder =
+              orders.length >= 1
+                ? orders.reduce((previous, value) => Math.min(previous, value))
+                : null
+            updatedOrders[0] = smallestOrder
+              ? safeSubtraction(smallestOrder, GAP)
+              : 0
+          }
+        } else {
+          updatedOrders[0] = firstSubtask.order
+        }
+        for (let index2 = 1; index2 < updatedSubtasks.length; index2++) {
+          const order = updatedSubtasks[index2].order
+          const orderBefore = updatedOrders[index2 - 1]
+          if (typeof order !== "number" || order <= orderBefore) {
+            const orderAfter = updatedSubtasks[index2 + 1]?.order
+            const oneHigherOrMax = safeAddition(orderBefore, 1)
+            updatedOrders[index2] =
+              typeof orderAfter === "number"
+                ? Math.max(
+                    Math.round((orderBefore + orderAfter) / 2),
+                    oneHigherOrMax,
+                  )
+                : oneHigherOrMax
+          } else {
+            updatedOrders[index2] = order
+          }
+        }
+
+        const promises: Promise<any>[] = []
+
+        for (let index2 = updatedSubtasks.length - 1; index2 >= 0; index2--) {
+          const isOrderDifferent =
+            updatedSubtasks[index2].order !== updatedOrders[index2]
+          const isMovedTask = updatedSubtasks[index2].id === task.id
+          if (isOrderDifferent || isMovedTask) {
+            promises.push(
+              DataStore.save(
+                Task.copyOf(updatedSubtasks[index2], (updated) => {
+                  if (isMovedTask) {
+                    updated.parentTaskID = parentTask ? parentTask.id : null
+                  }
+                  updated.order = updatedOrders[index2]
+                }),
+              ),
+            )
+          }
+        }
+
+        await Promise.all(promises)
+      } else {
+        await DataStore.save(
+          Task.copyOf(task, (updated) => {
+            updated.parentTaskID = parentTask.id
+            updated.order = 0
+          }),
+        )
+      }
+    },
+    [subtasks],
+  )
+
+  const insertBefore = useCallback(
+    async function (parentTask, task, droppedOnTask) {
+      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
+      const index = parentSubtasks.indexOf(droppedOnTask)
+      await insertAt(parentTask, task, index)
+    },
+    [insertAt, subtasks],
+  )
+
+  const insertAfter = useCallback(
+    async function (parentTask, task, taskBefore) {
+      const parentSubtasks = subtasks.get(parentTask ? parentTask.id : null)!
+      const index = parentSubtasks.indexOf(taskBefore) + 1
+      await insertAt(parentTask, task, index)
+    },
+    [insertAt, subtasks],
+  )
+
+  const onDrop = useCallback(
+    async function onDrop(
+      droppedOnTask: Task,
+      droppedTask: Task,
+      location: Location | null,
+      insertAsSubtask: boolean,
+    ) {
+      if (insertAsSubtask) {
+        await insertAt(droppedOnTask, droppedTask, 0)
+      } else {
+        if (location === Location.Above) {
+          await insertBefore(
+            droppedOnTask.parentTaskID
+              ? idToTask.get(droppedOnTask.parentTaskID)
+              : null,
+            droppedTask,
+            droppedOnTask,
+          )
+        } else if (location === Location.Below) {
+          if (hasSubtasks(droppedOnTask)) {
+            await insertAt(droppedOnTask, droppedTask, 0)
+          } else {
+            await insertAfter(
+              droppedOnTask.parentTaskID
+                ? idToTask.get(droppedOnTask.parentTaskID)
+                : null,
+              droppedTask,
+              droppedOnTask,
+            )
+          }
+        }
+      }
+    },
+    [hasSubtasks, insertBefore, insertAfter, insertAt, idToTask],
+  )
+
   const [{ insertAbove, insertBelow, insertAsSubtask }, dropRef] = useDrop(
     () => ({
       accept: ItemTypes.TASK,
@@ -687,6 +702,31 @@ function TaskItem({ task, onDrop }) {
     [task, determineDropLocation, determineIfToInsertAsSubtask],
   )
 
+  const [{ insertBelow2 }, dropRef2] = useDrop(
+    () => ({
+      accept: ItemTypes.TASK,
+      canDrop({ task: task2 }: { task: Task }) {
+        return task2.id !== task.id
+      },
+      async drop({ task: droppedTask }: { task: Task }, monitor) {
+        const droppedOnTask = task
+        await insertAfter(
+          droppedOnTask.parentTaskID
+            ? idToTask.get(droppedOnTask.parentTaskID)
+            : null,
+          droppedTask,
+          droppedOnTask,
+        )
+      },
+      collect(monitor: DropTargetMonitor) {
+        return {
+          insertBelow2: monitor.isOver(),
+        }
+      },
+    }),
+    [task, determineDropLocation, insertAfter],
+  )
+
   const refCallback = useCallback(
     (node) => {
       taskRef.current = node
@@ -697,7 +737,7 @@ function TaskItem({ task, onDrop }) {
   )
 
   return (
-    <div className="task">
+    <div className={clsx("task", "d-flex", "flex-column", className)}>
       <div
         className={clsx(
           "row",
@@ -764,7 +804,7 @@ function TaskItem({ task, onDrop }) {
       </div>
 
       <div style={{ paddingLeft: "2.5rem" }}>
-        <TaskList tasks={subtasks.get(task.id) ?? []} />
+        <TaskList parentTask={task} tasks={subtasks.get(task.id) ?? []} />
 
         {isEditModeEnabled && (
           <form
@@ -786,6 +826,11 @@ function TaskItem({ task, onDrop }) {
           </form>
         )}
       </div>
+
+      <div
+        className={clsx("flex-grow-1", insertBelow2 && "insert-below2")}
+        ref={dropRef2}
+      ></div>
     </div>
   )
 }
