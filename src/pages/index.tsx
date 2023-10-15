@@ -657,7 +657,7 @@ function TaskItem({ task, onDrop }) {
         return false
       }
     },
-    [task, taskRef, subtasks],
+    [task, taskRef, subtasks, determineDropLocation],
   )
 
   const [{ insertAbove, insertBelow, insertAsSubtask }, dropRef] = useDrop(
