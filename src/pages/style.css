@@ -31,3 +31,7 @@ body {
   right: 0;
   z-index: 10;
 }
+
+.insert-as-subtask:before, .insert-as-subtask:after {
+  left: 100px;
+}
