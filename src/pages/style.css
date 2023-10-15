@@ -6,6 +6,10 @@
   border-bottom-color: blue !important;
 }
 
-.container {
+.container, .container .row  {
+  --bs-gutter-x: 2rem;
+}
+
+.container-gx-0, .container-gx-0 .row  {
   --bs-gutter-x: 0;
 }
