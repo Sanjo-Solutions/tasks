@@ -250,7 +250,7 @@ function App({ signOut }) {
       }}
     >
       <EditModeContext.Provider value={isEditModeEnabled}>
-        <div className="container pb-3">
+        <div className="container container-gx-0 pb-3">
           <div className="p-3 text-end">
             <input
               type="checkbox"
@@ -603,7 +603,6 @@ function TaskItem({ task, onDrop }) {
             draggedOverTaskRef.current!.getBoundingClientRect()
           const height = draggedOverTaskRef.current!.clientHeight
           const draggedOverVerticalCenterY = draggedOverY + 0.5 * height
-          console.log(draggedVerticalCenterY, draggedOverVerticalCenterY)
           return draggedVerticalCenterY < draggedOverVerticalCenterY
             ? Location.Above
             : Location.Below
