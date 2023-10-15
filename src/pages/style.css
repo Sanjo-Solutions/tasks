@@ -32,6 +32,17 @@ body {
   z-index: 10;
 }
 
+.insert-below2:before {
+  height: 2px;
+  background-color: var(--bs-primary);
+  content: "";
+  margin-top: -1px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
 .insert-as-subtask:before, .insert-as-subtask:after {
   left: 100px;
 }
