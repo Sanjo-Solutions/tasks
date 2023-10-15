@@ -504,7 +504,7 @@ function TaskItem({ task, className }) {
               const draggedOverTaskRef = taskRef
               const { x: draggedOverX } =
                 draggedOverTaskRef.current!.getBoundingClientRect()
-              return draggedX >= draggedOverX + 100
+              return draggedX > draggedOverX + 56
             } else {
               return false
             }
@@ -740,8 +740,7 @@ function TaskItem({ task, className }) {
     <div className={clsx("task", "d-flex", "flex-column", className)}>
       <div
         className={clsx(
-          "row",
-          "gx-0",
+          "position-relative",
           "w-100",
           (isDragging || isDragging2) && "bg-body-tertiary",
           insertAbove && "insert-above",
@@ -752,6 +751,7 @@ function TaskItem({ task, className }) {
         style={{
           ...(isDragging
             ? {
+                opacity: 0.8,
                 position: "relative",
                 zIndex: 9999,
                 transform: `translate(${difference!.x}px, ${difference!.y}px)`,
@@ -762,45 +762,47 @@ function TaskItem({ task, className }) {
             : {}),
         }}
       >
-        <div className="col-auto d-flex align-items-center">
-          <div
-            className="flex-grow-1"
-            onClick={onCheckBoxAreaClicked}
-            style={{
-              paddingTop: "1.1875rem",
-              paddingBottom: "1.1875rem",
-              paddingLeft: "1.1875rem",
-              paddingRight: "1.1875rem",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={Boolean(task.completed)}
-              onChange={onToggleCompleted}
-              onClick={onCheckBoxClicked}
-              className="d-block mt-0"
-              style={{ width: "1.125rem", height: "1.125rem" }}
-            />
-          </div>
-          <label className="form-check-label">{task.description}</label>
-        </div>
-        {isEditModeEnabled && (
-          <div className="col-auto ms-auto">
+        <div className="row gx-0">
+          <div className="col-auto d-flex align-items-center">
             <div
-              onClick={onDelete}
+              className="flex-grow-1"
+              onClick={onCheckBoxAreaClicked}
               style={{
-                paddingTop: "0.625rem",
-                paddingBottom: "0.625rem",
-                paddingLeft: "1rem",
-                paddingRight: "1rem",
-                cursor: "pointer",
-                fontSize: "1.5rem",
+                paddingTop: "1.1875rem",
+                paddingBottom: "1.1875rem",
+                paddingLeft: "1.1875rem",
+                paddingRight: "1.1875rem",
               }}
             >
-              <i className="bi bi-trash3"></i>
+              <input
+                type="checkbox"
+                checked={Boolean(task.completed)}
+                onChange={onToggleCompleted}
+                onClick={onCheckBoxClicked}
+                className="d-block mt-0"
+                style={{ width: "1.125rem", height: "1.125rem" }}
+              />
             </div>
+            <label className="form-check-label">{task.description}</label>
           </div>
-        )}
+          {isEditModeEnabled && (
+            <div className="col-auto ms-auto">
+              <div
+                onClick={onDelete}
+                style={{
+                  paddingTop: "0.625rem",
+                  paddingBottom: "0.625rem",
+                  paddingLeft: "1rem",
+                  paddingRight: "1rem",
+                  cursor: "pointer",
+                  fontSize: "1.5rem",
+                }}
+              >
+                <i className="bi bi-trash3"></i>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ paddingLeft: "2.5rem" }}>
