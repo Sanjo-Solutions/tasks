@@ -10,14 +10,18 @@ body {
   --bs-gutter-x: 0;
 }
 
+.task {
+  position: relative;
+}
+
 .insert-above:before {
   height: 2px;
   background-color: var(--bs-primary);
   content: "";
   margin-top: -1px;
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 1rem;
+  right: 1rem;
   z-index: 10;
 }
 
@@ -25,10 +29,10 @@ body {
   height: 2px;
   background-color: var(--bs-primary);
   content: "";
-  margin-top: 55px;
+  margin-top: -1px;
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 1rem;
+  right: 1rem;
   z-index: 10;
 }
 
@@ -38,11 +42,11 @@ body {
   content: "";
   margin-top: -1px;
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 1rem;
+  right: 1rem;
   z-index: 10;
 }
 
 .insert-as-subtask:before, .insert-as-subtask:after {
-  left: 100px;
+  left: 56px;
 }
