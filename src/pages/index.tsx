@@ -366,7 +366,7 @@ function TaskList({ tasks }) {
         } else {
           updatedOrders[0] = firstSubtask.order
         }
-        for (let index2 = 1; index2 < parentSubtasks.length; index2++) {
+        for (let index2 = 1; index2 < updatedSubtasks.length; index2++) {
           const order = updatedSubtasks[index2].order
           const orderBefore = updatedOrders[index2 - 1]
           if (typeof order !== "number" || order <= orderBefore) {
