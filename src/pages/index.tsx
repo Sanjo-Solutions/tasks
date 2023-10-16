@@ -184,7 +184,11 @@ class App2 extends React.Component<
   }
 }
 
-function App({ signOut }) {
+interface AppProps {
+  signOut: () => void
+}
+
+function App({ signOut }: AppProps) {
   const [isEditModeEnabled, setIsEditModeEnabled] = useState(
     localStorage.getItem("isEditModeEnabled") !== "false",
   )
@@ -333,7 +337,7 @@ function TaskList({
   )
 }
 
-function TaskItem({ task, className }) {
+function TaskItem({ task, className }: { task: Task; className?: string }) {
   const {
     tasks: idToTask,
     subtasks,
@@ -341,7 +345,7 @@ function TaskItem({ task, className }) {
   } = useContext(TasksContext)
 
   const onToggleCompleted = useCallback(
-    async (event) => {
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
       await DataStore.save(
         Task.copyOf(task, (updated) => {
           updated.completed = event.target.checked
@@ -351,17 +355,23 @@ function TaskItem({ task, className }) {
     [task],
   )
 
-  const onCheckBoxAreaClicked = useCallback(async () => {
-    await DataStore.save(
-      Task.copyOf(task, (updated) => {
-        updated.completed = !task.completed
-      }),
-    )
-  }, [task])
+  const onCheckBoxAreaClicked = useCallback(
+    async (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      await DataStore.save(
+        Task.copyOf(task, (updated) => {
+          updated.completed = !task.completed
+        }),
+      )
+    },
+    [task],
+  )
 
-  const onCheckBoxClicked = useCallback((event) => {
-    event.stopPropagation()
-  }, [])
+  const onCheckBoxClicked = useCallback(
+    (event: React.MouseEvent<HTMLInputElement, MouseEvent>) => {
+      event.stopPropagation()
+    },
+    [],
+  )
 
   const onDelete = useCallback(async () => {
     await DataStore.delete(task)
