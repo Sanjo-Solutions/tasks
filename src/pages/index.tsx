@@ -325,7 +325,10 @@ function TaskList({
   className?: string
 }) {
   return (
-    <div className="flex-grow-1 d-flex flex-column">
+    <div
+      className="flex-grow-1 d-flex flex-column"
+      style={{ userSelect: "none" }}
+    >
       {tasks.map((task, index) => (
         <TaskItem
           key={task.id}
