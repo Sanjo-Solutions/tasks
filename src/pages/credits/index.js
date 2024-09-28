@@ -2,14 +2,15 @@ import { Credit } from "../../components/credits/Credit"
 import React from "react"
 import { NavBar } from "../../components/NavBar"
 import { serializeMDX } from "../../serializeMDX"
-
-export const metadata = {
-  title: "Credits",
-}
+import Head from "next/head"
 
 export default function Page({ credits }) {
   return (
     <>
+      <Head>
+        <title>Credits</title>
+      </Head>
+
       <NavBar />
 
       <div className="container pt-2">
