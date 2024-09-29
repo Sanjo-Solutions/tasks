@@ -205,6 +205,17 @@ function App({ signOut }: AppProps) {
     }
   }
 
+  const onDescriptionChange = useCallback(async function onDescriptionChange(
+    task: Task,
+    newDescription: string,
+  ) {
+    await DataStore.save(
+      Task.copyOf(task, (updated) => {
+        updated.description = newDescription
+      }),
+    )
+  }, [])
+
   const onChangeEditMode = useCallback((event) => {
     setIsEditModeEnabled(event.target.checked)
     localStorage.setItem("isEditModeEnabled", event.target.checked)
@@ -309,7 +320,11 @@ function App({ signOut }: AppProps) {
               </div>
             </form>
           )}
-          <TaskList parentTask={null} tasks={subtasks.get(null) ?? []} />
+          <TaskList
+            parentTask={null}
+            tasks={subtasks.get(null) ?? []}
+            onDescriptionChange={onDescriptionChange}
+          />
         </div>
       </EditModeContext.Provider>
     </DndProvider>
@@ -319,9 +334,11 @@ function App({ signOut }: AppProps) {
 function TaskList({
   parentTask,
   tasks,
+  onDescriptionChange,
 }: {
   parentTask: Task | null
   tasks: Task[]
+  onDescriptionChange: (task: Task, newDescription: string) => Promise<void>
   className?: string
 }) {
   return (
@@ -333,6 +350,7 @@ function TaskList({
         <TaskItem
           key={task.id}
           task={task}
+          onDescriptionChange={onDescriptionChange}
           className={clsx(index === tasks.length - 1 && "flex-grow-1")}
         />
       ))}
@@ -340,12 +358,30 @@ function TaskList({
   )
 }
 
-function TaskItem({ task, className }: { task: Task; className?: string }) {
+function TaskItem({
+  task,
+  onDescriptionChange,
+  className,
+}: {
+  task: Task
+  onDescriptionChange: (task: Task, newDescription: string) => Promise<void>
+  className?: string
+}) {
   const {
     tasks: idToTask,
     subtasks,
     generateOrderForNewTask,
   } = useContext(TasksContext)
+
+  const [isEditing, setIsEditing] = useState<boolean>(false)
+  const [description, setDescription] = useState<string>(task.description)
+
+  const onDescriptionValueChange = useCallback(
+    function onDescriptionValueChange(event) {
+      setDescription(event.target.value)
+    },
+    [],
+  )
 
   const onToggleCompleted = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,6 +410,18 @@ function TaskItem({ task, className }: { task: Task; className?: string }) {
       event.stopPropagation()
     },
     [],
+  )
+
+  const onEdit = useCallback(
+    function onEdit() {
+      if (isEditing) {
+        if (description !== task.description) {
+          onDescriptionChange(task, description)
+        }
+      }
+      setIsEditing(!isEditing)
+    },
+    [isEditing, onDescriptionChange, task, description],
   )
 
   const onDelete = useCallback(async () => {
@@ -776,7 +824,14 @@ function TaskItem({ task, className }: { task: Task; className?: string }) {
         }}
       >
         <div className="row gx-0">
-          <div className="col-auto d-flex align-items-center">
+          <div
+            className={clsx(
+              "col-auto",
+              "d-flex",
+              "align-items-center",
+              isEditing && "flex-grow-1",
+            )}
+          >
             <div
               className="flex-grow-1"
               onClick={onCheckBoxAreaClicked}
@@ -796,10 +851,36 @@ function TaskItem({ task, className }: { task: Task; className?: string }) {
                 style={{ width: "1.125rem", height: "1.125rem" }}
               />
             </div>
-            <label className="form-check-label">{task.description}</label>
+            {isEditing ? (
+              <input
+                className="form-control"
+                type="text"
+                value={description}
+                onChange={onDescriptionValueChange}
+              ></input>
+            ) : (
+              <label className="form-check-label">{task.description}</label>
+            )}
           </div>
           {isEditModeEnabled && (
             <div className="col-auto ms-auto">
+              <div
+                onClick={onEdit}
+                style={{
+                  paddingTop: "0.625rem",
+                  paddingBottom: "0.625rem",
+                  paddingLeft: "1rem",
+                  paddingRight: "1rem",
+                  cursor: "pointer",
+                  fontSize: "1.5rem",
+                }}
+              >
+                <i className="bi bi-pencil-square"></i>
+              </div>
+            </div>
+          )}
+          {isEditModeEnabled && (
+            <div className="col-auto">
               <div
                 onClick={onDelete}
                 style={{
@@ -819,7 +900,11 @@ function TaskItem({ task, className }: { task: Task; className?: string }) {
       </div>
 
       <div style={{ paddingLeft: "2.5rem" }}>
-        <TaskList parentTask={task} tasks={subtasks.get(task.id) ?? []} />
+        <TaskList
+          parentTask={task}
+          tasks={subtasks.get(task.id) ?? []}
+          onDescriptionChange={onDescriptionChange}
+        />
 
         {isEditModeEnabled && (
           <form
